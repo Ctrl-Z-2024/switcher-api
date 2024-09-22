@@ -1,13 +1,19 @@
 from pydantic import BaseModel, Field
 from app.db.enums import GameStatus
 from typing import List
-from app.schemas.player import PlayerSchemaOut
+#from app.schemas.player import PlayerSchemaOut
 from typing_extensions import Annotated
 from pydantic.functional_validators import AfterValidator
 
+###################### para testear ###############################
+class PlayerSchemaOut (BaseModel):
+    id_player: int
+
+###################################################################
+
 def check_player_amount(x: int):
-    assert x >= 2, f'xd'
-    assert x <= 4, f'xd'
+    assert x >= 2, f'Number out of range'
+    assert x <= 4, f'Number out of range'
     return x
 
 ValidatedAmount = Annotated[int, AfterValidator(check_player_amount)]
@@ -23,4 +29,4 @@ class GameSchemaOut (BaseModel):
     status: GameStatus
     host_id: int
     player_turn: int
-    players: list[PlayerSchemaOut] = []
+    players: List[PlayerSchemaOut] = []

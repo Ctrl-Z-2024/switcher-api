@@ -4,7 +4,7 @@ import re
 from typing_extensions import Annotated
 from app.schemas.game import GameSchemaIn
 from app.schemas.game import GameSchemaOut
-from fastapi import APIRouter, Body, HTTPException, Depends
+from fastapi import APIRouter, Body, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.db.db import SessionLocal, get_db
 from app.models.game import Game, Player
@@ -40,3 +40,39 @@ def create_game(game: GameSchemaIn, player_id: int, db = Depends(get_db)):
     return new_game
 
 
+@router.put("/games/{id_game}/quit")
+def quit_game(id_game: int, id_player: int, db: Session = Depends(get_db)):
+    #Search the game in database 
+    game = db.query(Game).filter(Game.id == id_game).first()
+
+    #Checks game existence
+    if not game: 
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Juego no encontrado")
+    
+    #Search the player in the game
+    try:
+        player = next((item for item in game.players if item["id"] == id_player), None)
+    except StopIteration:
+        player = None
+    
+    #Checks player existence inside the game
+    if not player: 
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "El jugador no esta en la partida")
+    
+    #Checks if the player is hosting the game
+    if id_player == game.host_id : 
+        raise HTTPException(status_code= status.HTTP_403_FORBIDDEN, detail = "El jugador es el host, no puede abandonar")
+
+    #Remove player from the game
+    game.players.remove(player)
+
+    #Update database
+
+    try:
+        db.commit()
+        db.refresh(game)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error actualizando la partida")
+
+    return {"message": f"{player.name} abandono la partida", "game": game}

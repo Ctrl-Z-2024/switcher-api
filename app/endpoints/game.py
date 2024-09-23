@@ -7,9 +7,11 @@ from app.schemas.game import GameSchemaOut
 from fastapi import APIRouter, Body, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.db.db import SessionLocal, get_db
-from app.models.game import Game, Player
+from app.models.game import Game
+from app.models.player import Player  
 from app.db.enums import GameStatus
 from app.dependencies.dependencies import get_game, get_player
+from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema
 
 router= APIRouter ()
 
@@ -43,30 +45,12 @@ def create_game(game: GameSchemaIn, player_id: int, db = Depends(get_db)):
 
 @router.put("/games/{id_game}/quit")
 def quit_game(id_player: int, game: Game = Depends (get_game), db: Session = Depends(get_db)):    
-    #Search the player in the game
-    try:
-        player = next((item for item in game.players if item["id"] == id_player), None)
-    except StopIteration:
-        player = None
-    
-    #Checks player existence inside the game
-    if not player: 
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "El jugador no esta en la partida")
-    
-    #Checks if the player is hosting the game
-    if id_player == game.host_id : 
+
+    player = search_player_in_game(id_player, game)
+
+    if is_player_host(id_player, game):
         raise HTTPException(status_code= status.HTTP_403_FORBIDDEN, detail = "El jugador es el host, no puede abandonar")
+    
+    remove_player_from_game (player,game,db)
 
-    #Remove player from the game
-    game.players.remove(player)
-
-    #Update database
-
-    try:
-        db.commit()
-        db.refresh(game)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error actualizando la partida")
-
-    return {"message": f"{player.name} abandono la partida", "game": GameSchemaOut}
+    return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}

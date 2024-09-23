@@ -7,7 +7,9 @@ from pydantic.functional_validators import AfterValidator
 
 ###################### para testear ###############################
 class PlayerSchemaOut (BaseModel):
-    id_player: int
+    id: int
+    name: str
+    game_id: int
 
 ###################################################################
 

@@ -6,6 +6,7 @@ from app.models.player import Player
 
 
 def get_player(id_player: int, db: Session = Depends(get_db)) -> Player:
+    """dependency to get a player by ID"""
     player = db.query(Player).filter(Player.id == id_player).first()
 
     if not player:
@@ -16,6 +17,7 @@ def get_player(id_player: int, db: Session = Depends(get_db)) -> Player:
 
 
 def get_game(id_game: int, db: Session = Depends(get_db)) -> Game:
+    """dependency to get a game by ID"""
     game = db.query(Game).filter(Game.id == id_game).first()
 
     if not game:

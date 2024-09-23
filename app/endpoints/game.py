@@ -11,8 +11,16 @@ router = APIRouter(
     tags=["Games"]
 )
 
-@router.put("/{id_game}/join")
+@router.put("/{id_game}/join", summary="Join a game")
 def join_game(game: Game = Depends(get_game), player: Player = Depends(get_player), db: Session = Depends(get_db)):
+    """
+    Join a player to an existing game.
+    
+    **Parameters:**
+    - `id_game`: The ID of the game to join.
+    
+    - `id_player`: The ID of the player to join the game.
+    """
     validate_game_capacity(game)
     
     add_player_to_game(game, player, db)

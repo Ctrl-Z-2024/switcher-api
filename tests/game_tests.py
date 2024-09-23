@@ -46,6 +46,7 @@ def test_join_game_full_capacity():
     # Create the mock database session
     mock_db = MagicMock()
 
+    # Create mock list of players to simulate players in a game
     mock_list_players = [
         Player(id=1, name="Juan1", game_id=1),
         Player(id=2, name="Juan2", game_id=1),

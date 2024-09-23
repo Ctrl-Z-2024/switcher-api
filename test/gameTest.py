@@ -1,8 +1,9 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
 from app.models.game import Game
+from app.models.player_models import Player
 
 client = TestClient(app)
 
@@ -14,15 +15,25 @@ def mock_db_config(mock_db):
         status="waiting",
         player_turn=0 
     )
+
+    mock_player = MagicMock()
+    mock_player.id = 1
+    mock_player.name = "Test Player"  
+    mock_player.game_joined = 1
+
     def add_side_effect(game):
         game.status = mock_game.status
         game.player_turn = mock_game.player_turn
 
-    mock_db.add.return_value = None
+    # Mock database behavior
     mock_db.add.side_effect = add_side_effect
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = mock_game
-    mock_db.query.return_value.filter_by.return_value.first.return_value = 1
+
+    # Ensure mock_player.name returns a string
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_player
+    mock_db.query.return_value.filter_by.return_value.first.return_value = mock_player
+
     mock_db.refresh.side_effect = lambda x: setattr(x, 'id', mock_game.id)
 
 def test_create_game():
@@ -45,7 +56,8 @@ def test_create_game():
         "player_turn": 0,
         "players": [
             {
-                "id_player": 1,
+                "id": 1,
+                "name": "Test Player",
             }
         ]
     }

@@ -2,17 +2,9 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import GameStatus
-#from app.models.player import Player
+from app.models.player_models import Player
 
-#################################  para testear #####################################3
-class Player(Base):
-   __tablename__ = "players"
 
-   id = Column (Integer, primary_key=True, autoincrement=True)
-   game_id = Column(Integer, ForeignKey("games.id"))
-   game = relationship("Game", back_populates="players")
-
-######################################################################################3
 
 class Game(Base):
     __tablename__ = "games" 
@@ -29,4 +21,4 @@ class Game(Base):
     host_id = Column (Integer, ForeignKey("player.id"))
    
     #Relacion One-to-many entre game y jugadores
-    players = relationship ("Player", back_populates= "game")
+    players = relationship ("Player", back_populates= "game", foreign_keys=[Player.game_joined], primaryjoin="Player.game_joined == Game.id")

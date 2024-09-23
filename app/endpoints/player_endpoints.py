@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import Body
 from fastapi import APIRouter, HTTPException, Depends
 from app.db.db import get_db
-from app.db.schemas.player_schemas import *
-from app.db.models.player_models import *
+from app.schemas.player_schemas import *
+from app.models.player_models import *
 
 router = APIRouter()
 

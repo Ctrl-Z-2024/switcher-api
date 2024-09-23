@@ -9,5 +9,5 @@ class PlayerSchemaIn(BaseModel):
         orm_mode = True
     
 class PlayerSchemaOut(BaseModel):
-    name: str
     id: int
+    name: str

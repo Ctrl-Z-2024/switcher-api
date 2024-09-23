@@ -22,7 +22,8 @@ def add_player_to_game(game: Game, player: Player, db: Session):
 
 def convert_game_to_schema(game: Game) -> GameSchemaOut:
     """return the schema view of Game"""
-    game_out = GameSchemaOut(id=game.id, player_amount=game.player_amount)
+    game_out = GameSchemaOut(id=game.id, player_amount=game.player_amount, name=game.name,
+                             host_id=game.host_id, player_turn=game.player_turn, status=game.status)
     game_out.players = [PlayerSchemaOut(
         id=pl.id, name=pl.name, game_id=pl.game_id) for pl in game.players]
     return game_out

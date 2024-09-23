@@ -1,8 +1,18 @@
-from fastapi import HTTPException, status, Depends
+import re
+from fastapi import HTTPException, status, Depends, Body
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game import Game
 from app.models.player import Player
+from app.schemas.game import GameSchemaIn, Annotated
+
+
+def check_name(game: Annotated[GameSchemaIn, Body()]):
+    if ((not game.name) or (len(game.name) > 20)):
+        raise HTTPException(status_code=422, detail="Invalid name")
+    if not re.match("^[a-zA-Z ]*$", game.name):
+        raise HTTPException(
+            status_code=422, detail="Name can only contain letters and spaces")
 
 
 def get_player(id_player: int, db: Session = Depends(get_db)) -> Player:

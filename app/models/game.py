@@ -2,17 +2,6 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import GameStatus
-#from app.models.player import Player
-
-#################################  para testear #####################################3
-class Player(Base):
-   __tablename__ = "players"
-
-   id = Column (Integer, primary_key=True, autoincrement=True)
-   game_id = Column(Integer, ForeignKey("games.id"))
-   game = relationship("Game", back_populates="players")
-
-######################################################################################3
 
 class Game(Base):
     __tablename__ = "games" 

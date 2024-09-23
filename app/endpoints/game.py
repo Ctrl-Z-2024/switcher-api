@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.db import SessionLocal, get_db
 from app.models.game import Game, Player
 from app.db.enums import GameStatus
+from app.dependencies.dependencies import get_game, get_player
 
 router= APIRouter ()
 
@@ -41,14 +42,7 @@ def create_game(game: GameSchemaIn, player_id: int, db = Depends(get_db)):
 
 
 @router.put("/games/{id_game}/quit")
-def quit_game(id_game: int, id_player: int, db: Session = Depends(get_db)):
-    #Search the game in database 
-    game = db.query(Game).filter(Game.id == id_game).first()
-
-    #Checks game existence
-    if not game: 
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Juego no encontrado")
-    
+def quit_game(id_player: int, game: Game = Depends (get_game), db: Session = Depends(get_db)):    
     #Search the player in the game
     try:
         player = next((item for item in game.players if item["id"] == id_player), None)
@@ -75,4 +69,4 @@ def quit_game(id_game: int, id_player: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error actualizando la partida")
 
-    return {"message": f"{player.name} abandono la partida", "game": game}
+    return {"message": f"{player.name} abandono la partida", "game": GameSchemaOut}

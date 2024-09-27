@@ -4,6 +4,8 @@ from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerSchemaOut
+import random
+
 
 
 def validate_game_capacity(game: Game):
@@ -78,3 +80,15 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
     game_out.players = [PlayerSchemaOut(
         id=pl.id, name=pl.name, game_id=pl.game_id) for pl in game.players]
     return game_out
+
+def validate_players_amount(game:Game):
+    if len(game.players) != game.player_amount:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="La partida requiere exactamente {game.player_amount} jugadores para ser iniciada")
+    
+def shuffle_players (game:Game):
+
+    random.shuffle (game.players)
+    game.player_turn=0
+    
+    

@@ -70,10 +70,13 @@ def quit_game(id_player: int, game: Game = Depends(get_game), db: Session = Depe
 
 
 @router.put("/{id_game}/start")
-def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db)):
+def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), response_model=GameSchemaOut):
 
     validate_players_amount(game)
     shuffle_players(game)
-    game.status= "in game"
-    
+    game.status= "in game" 
+
+    game_out= convert_game_to_schema(game)
+    db.commit()
+    return {"message": "La partida ha comenzado", "game": game_out}
    

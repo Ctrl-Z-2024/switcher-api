@@ -84,7 +84,7 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
 def validate_players_amount(game:Game):
     if len(game.players) != game.player_amount:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="La partida requiere exactamente {game.player_amount} jugadores para ser iniciada")
+                            detail="La partida requiere la cantidad de jugadores especificada para ser iniciada")
     
 def shuffle_players (game:Game):
 

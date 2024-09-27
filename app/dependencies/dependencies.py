@@ -35,3 +35,4 @@ def get_game(id_game: int, db: Session = Depends(get_db)) -> Game:
             status_code=status.HTTP_404_NOT_FOUND, detail="Partida no encontrada")
 
     return game
+

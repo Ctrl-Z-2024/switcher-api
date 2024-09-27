@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, Mock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
-from app.models.game import Game
+from app.models.game_models import Game
 from app.models.player_models import Player 
 from app.dependencies.dependencies import get_game, get_player
 

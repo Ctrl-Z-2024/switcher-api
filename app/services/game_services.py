@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from app.models.game import Game
+from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut, PlayerSchemaOut
 from app.dependencies.dependencies import get_game, get_player

@@ -2,13 +2,12 @@
 #from app.main import app
 import re
 from typing_extensions import Annotated
-from app.schemas.game import GameSchemaIn
-from app.schemas.game import GameSchemaOut
+from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
 from fastapi import APIRouter, Body, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.db.db import SessionLocal, get_db
 from app.models.game import Game
-from app.models.player import Player  
+from app.models.player_models import Player  
 from app.db.enums import GameStatus
 from app.dependencies.dependencies import get_game, get_player
 from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema

@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game import Game
-from app.models.player import Player
+from app.models.player_models import Player
 
 
 def get_player(id_player: int, db: Session = Depends(get_db)) -> Player:

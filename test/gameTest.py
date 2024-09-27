@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
 from app.models.game import Game
-from app.models.player import Player 
+from app.models.player_models import Player 
 from app.dependencies.dependencies import get_game, get_player
 
 client = TestClient(app)
@@ -19,7 +19,7 @@ def mock_db_config(mock_db):
     mock_player = MagicMock()
     mock_player.id = 1
     mock_player.name = "Test Player"  
-    mock_player.game_joined = 1
+    mock_player.game_id = 1
     
     def add_side_effect(game):
         game.status = mock_game.status
@@ -29,6 +29,11 @@ def mock_db_config(mock_db):
     mock_db.add.side_effect = add_side_effect
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = mock_game
+
+    # Ensure mock_player.name returns a string
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_player
+    mock_db.query.return_value.filter_by.return_value.first.return_value = mock_player
+
 
     # Ensure mock_player.name returns a string
     mock_db.query.return_value.filter.return_value.first.return_value = mock_player

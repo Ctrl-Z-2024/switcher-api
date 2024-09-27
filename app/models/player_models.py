@@ -12,5 +12,5 @@ class Player(Base):
     token = Column(String, default = None)
 
     #relation many-to-one between player and game
-    game_joined = Column(Integer, ForeignKey("game.id"), nullable = True, default = None)
-    game = relationship("Game", back_populates="players", foreign_keys=[game_joined], primaryjoin="Player.game_joined == Game.id")
+    game_id = Column(Integer, ForeignKey("game.id"), nullable = True, default = None)
+    game = relationship("Game", back_populates="players", foreign_keys=[game_id], primaryjoin="Player.game_id == Game.id")

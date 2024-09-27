@@ -21,4 +21,4 @@ class Game(Base):
     host_id = Column (Integer, ForeignKey("player.id"))
    
     #Relacion One-to-many entre game y jugadores
-    players = relationship ("Player", back_populates= "game", foreign_keys=[Player.game_joined], primaryjoin="Player.game_joined == Game.id")
+    players = relationship ("Player", back_populates= "game", foreign_keys=[Player.game_id], primaryjoin="Player.game_id == Game.id")

@@ -5,9 +5,11 @@ from pydantic import BaseModel
 
 class PlayerSchemaIn(BaseModel):
     name: str
-    class Config:
-        orm_mode = True
     
 class PlayerSchemaOut(BaseModel):
     id: int
     name: str
+    game_id: int | None = None
+
+    class ConfigDict:
+        from_attributes = True

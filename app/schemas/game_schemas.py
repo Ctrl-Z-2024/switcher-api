@@ -25,3 +25,6 @@ class GameSchemaOut (BaseModel):
     host_id: int
     player_turn: int
     players: List[PlayerSchemaOut] = []
+
+    class ConfigDict:
+        from_attributes = True

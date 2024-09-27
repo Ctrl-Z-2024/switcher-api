@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.endpoints.game import router as game_router
+from app.endpoints.game_endpoints import router as game_router
 from app.endpoints.player_endpoints import router as player_router
 
 app = FastAPI()

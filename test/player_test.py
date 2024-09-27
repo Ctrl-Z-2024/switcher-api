@@ -28,7 +28,8 @@ def test_create_player():
 
     expected_player_out = {
         "name": "test",
-        "id": 1
+        "id": 1,
+        "game_id": None
     }
 
     response = client.post("/players", json=new_player)
@@ -63,3 +64,15 @@ def test_name_too_long():
 
     assert response.status_code == 422
     assert response.json() == {"detail": "Invalid name"}
+
+def test_name_with_numbers():
+    mock_db()
+
+    new_player = {
+        "name": "Test123"
+    }
+
+    response = client.post("/players", json = new_player)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Name can only contain letters and spaces"}

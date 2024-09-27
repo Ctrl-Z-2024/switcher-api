@@ -2,9 +2,9 @@ import re
 from fastapi import HTTPException, status, Depends, Body
 from sqlalchemy.orm import Session
 from app.db.db import get_db
-from app.models.game import Game
-from app.models.player import Player
-from app.schemas.game import GameSchemaIn, Annotated
+from app.models.game_models import Game
+from app.models.player_models import Player
+from app.schemas.game_schemas import GameSchemaIn, Annotated
 
 
 def check_name(game: Annotated[GameSchemaIn, Body()]):

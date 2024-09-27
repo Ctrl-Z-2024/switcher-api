@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.db.enums import GameStatus
 from typing import List
-from app.schemas.player import PlayerSchemaOut
+from app.schemas.player_schemas import PlayerSchemaOut
 from typing_extensions import Annotated
 from pydantic.functional_validators import AfterValidator
+
 
 def check_player_amount(x: int):
     assert x >= 2, f'Number out of range'
@@ -12,11 +13,11 @@ def check_player_amount(x: int):
 
 ValidatedAmount = Annotated[int, AfterValidator(check_player_amount)]
 
-class GameSchemaIn(BaseModel):
+class GameSchemaIn (BaseModel):
     name: str
     player_amount: ValidatedAmount
 
-class GameSchemaOut(BaseModel):
+class GameSchemaOut (BaseModel):
     id: int
     name: str
     player_amount: int
@@ -24,3 +25,6 @@ class GameSchemaOut(BaseModel):
     host_id: int
     player_turn: int
     players: List[PlayerSchemaOut] = []
+
+    class ConfigDict:
+        from_attributes = True

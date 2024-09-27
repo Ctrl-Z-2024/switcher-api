@@ -1,54 +1,69 @@
-#from fastapi.security import HTTPAuthorizationCredentials
-#from app.main import app
-import re
-from typing_extensions import Annotated
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
-from fastapi import APIRouter, Body, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game_models import Game
 from app.models.player_models import Player
-from app.dependencies.dependencies import get_game
-from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema
+from app.dependencies.dependencies import get_game, get_player, check_name
+from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game
 
-router= APIRouter ()
+# with prefix we don't need to add /games to our endpoints urls
+router = APIRouter(
+    prefix="/games",
+    tags=["Games"]
+)
 
-def check_name(game: Annotated[GameSchemaIn,Body()]):
-    if ((not game.name) or (len(game.name) > 20)):
-        raise HTTPException(status_code=422, detail="Invalid name")
-    if not re.match("^[a-zA-Z ]*$", game.name):
-        raise HTTPException(status_code=422, detail="Name can only contain letters and spaces")
 
-@router.post("/games", dependencies=[Depends(check_name)] ,response_model=GameSchemaOut)
+@router.post("/", dependencies=[Depends(check_name)], response_model=GameSchemaOut)
 def create_game(game: GameSchemaIn, player_id: int, db: Session = Depends(get_db)):
-    #query al jugador
-
+    # query to player
     player = db.query(Player).filter(Player.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
 
     new_game = Game(
-        name = game.name,
-        player_amount = game.player_amount,
-        host_id = player.id, 
-        
+        name=game.name,
+        player_amount=game.player_amount,
+        host_id=player.id,
+
     )
     new_game.players.append(player)
 
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
+
     return new_game
 
 
-@router.put("/games/{id_game}/quit")
-def quit_game(id_player: int, game: Game = Depends (get_game), db: Session = Depends(get_db)):    
+@router.put("/{id_game}/join", summary="Join a game")
+def join_game(game: Game = Depends(get_game), player: Player = Depends(get_player), db: Session = Depends(get_db)):
+    """
+    Join a player to an existing game.
+
+    **Parameters:**
+    - `id_game`: The ID of the game to join.
+
+    - `id_player`: The ID of the player to join the game.
+    """
+    validate_game_capacity(game)
+
+    add_player_to_game(game, player, db)
+
+    game_out = convert_game_to_schema(game)
+
+    return {"message": "Jugador unido a la partida", "game": game_out}
+
+
+@router.put("/{id_game}/quit")
+def quit_game(id_player: int, game: Game = Depends(get_game), db: Session = Depends(get_db)):
 
     player = search_player_in_game(id_player, game)
 
     if is_player_host(id_player, game):
-        raise HTTPException(status_code= status.HTTP_403_FORBIDDEN, detail = "El jugador es el host, no puede abandonar")
-    
-    remove_player_from_game (player,game,db)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="El jugador es el host, no puede abandonar")
+
+    remove_player_from_game(player, game, db)
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}

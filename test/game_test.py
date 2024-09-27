@@ -1,5 +1,5 @@
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
@@ -345,51 +345,37 @@ def test_start_game():
         Player(id=3, name="Maria", game_id=1)
     ]
 
-    random.shuffle(mock_list_players) 
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
-    
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
-    
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_list_players
+    # Mockear shuffle para evitar que cambie el orden
+    with patch('random.shuffle', side_effect=lambda x: x):
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
+        
+        mock_db.get_game.return_value = mock_game
+        mock_db.get_players.return_value = mock_list_players
+        
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[get_player] = lambda: mock_list_players
   
-    response = client.put("games/1/start")
-    assert response.status_code == 200
-    
-    # Crear una respuesta esperada
-    expected_players = [
-        {"game_id": player.game_id, "id": player.id, "name": player.name}
-        for player in mock_list_players
-    ]
+        response = client.put("games/1/start")
+        assert response.status_code == 200
 
-    expected_response = {
-        "message": "La partida ha comenzado",
-        "game": {
-            "id": 1,
-            "name": "Game 1",
-            "status": "in game",
-            "host_id": 1,
-            "player_turn": 0,
-            "player_amount": 3,
-            "players": expected_players
+       
+        expected_response = {
+            "message": "La partida ha comenzado",
+            "game": {
+                "id": 1,
+                "name": "Game 1",
+                "status": "in game",
+                "host_id": 1,
+                "player_turn": 0,
+                "player_amount": 3,
+                "players": sorted([{"game_id": player.game_id, "id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
+            }
         }
-    }
-    response_data = response.json()
-    expected_data = expected_response
-    # Comparar sin importar el orden
-    assert (
-        response_data["message"] == expected_data["message"] and
-        response_data["game"]["id"] == expected_data["game"]["id"] and
-        response_data["game"]["name"] == expected_data["game"]["name"] and
-        response_data["game"]["status"] == expected_data["game"]["status"] and
-        response_data["game"]["host_id"] == expected_data["game"]["host_id"] and
-        response_data["game"]["player_turn"] == expected_data["game"]["player_turn"] and
-        response_data["game"]["player_amount"] == expected_data["game"]["player_amount"] and
-        sorted(response_data["game"]["players"], key=lambda x: x["id"]) == sorted(expected_data["game"]["players"], key=lambda x: x["id"])
-    )
-    app.dependency_overrides = {}
+
+        assert response.json() == expected_response
+        
+        app.dependency_overrides = {}
 
 def test_start_game_incorrect_player_amount():
     mock_db = MagicMock()

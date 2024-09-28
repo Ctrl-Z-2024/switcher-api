@@ -13,11 +13,11 @@ def check_player_amount(x: int):
 
 ValidatedAmount = Annotated[int, AfterValidator(check_player_amount)]
 
-class GameSchemaIn (BaseModel):
+class GameSchemaIn(BaseModel):
     name: str
     player_amount: ValidatedAmount
 
-class GameSchemaOut (BaseModel):
+class GameSchemaOut(BaseModel):
     id: int
     name: str
     player_amount: int
@@ -28,3 +28,14 @@ class GameSchemaOut (BaseModel):
 
     class ConfigDict:
         from_attributes = True
+
+    def get_players_connected(self) -> int:
+        return len(self.players)
+
+class GameSchemaList(GameSchemaOut):
+    players_connected: int
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.players_connected = self.get_players_connected()
+    

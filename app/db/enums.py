@@ -10,3 +10,7 @@ class GameStatus(Enum):
     full = "full"
     in_game = "in game"
 
+class MovementType (Enum):
+    LINEAR = "linear"
+    DIAGONAL = "diagonal"
+    LATERAL_CROSSING = "lateral line crossing"

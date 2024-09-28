@@ -1,10 +1,12 @@
-from unittest.mock import MagicMock
+import random
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
 from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
+from app.models.board import Board
 from app.dependencies.dependencies import get_game, get_player
 
 client = TestClient(app)
@@ -22,6 +24,7 @@ def mock_db_config(mock_db):
     mock_player.id = 1
     mock_player.name = "Test Player"
     mock_player.game_id = 1
+    
 
     def add_side_effect(game):
         game.status = mock_game.status
@@ -435,4 +438,73 @@ def test_get_games_invalid_status():
     }
 
     # Restaurar las dependencias después de la prueba
+    app.dependency_overrides = {}
+
+ # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
+
+def test_start_game():
+    mock_db = MagicMock()
+    
+    mock_list_players = [
+        Player(id=1, name="Juan", game_id=1),
+        Player(id=2, name="Pedro", game_id=1),
+        Player(id=3, name="Maria", game_id=1)
+    ]
+
+    # Mockear shuffle para evitar que cambie el orden
+    with patch('random.shuffle', side_effect=lambda x: x):
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
+        
+        mock_db.get_game.return_value = mock_game
+        mock_db.get_players.return_value = mock_list_players
+        
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[get_player] = lambda: mock_list_players
+  
+        response = client.put("games/1/start")
+        assert response.status_code == 200
+
+       
+        expected_response = {
+            "message": "La partida ha comenzado",
+            "game": {
+                "id": 1,
+                "name": "Game 1",
+                "status": "in game",
+                "host_id": 1,
+                "player_turn": 0,
+                "player_amount": 3,
+                "players": sorted([{"game_id": player.game_id, "id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
+            }
+        }
+
+        assert response.json() == expected_response
+        
+        app.dependency_overrides = {}
+
+def test_start_game_incorrect_player_amount():
+    mock_db = MagicMock()
+    
+    mock_list_players = [
+        Player(id=1, name="Juan", game_id=1),
+        Player(id=2, name="Pedro", game_id=1)
+        # Tenemos solo 2 jugadores, pero supongamos que se requieren 3
+    ]
+
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
+    
+    mock_db.get_game.return_value = mock_game
+    mock_db.get_players.return_value = mock_list_players
+    
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[get_player] = lambda: mock_list_players
+  
+    response = client.put("games/1/start")
+    assert response.status_code == 409  
+
+    assert response.json() == {
+        "detail": "La partida requiere la cantidad de jugadores especificada para ser iniciada"
+    }
     app.dependency_overrides = {}

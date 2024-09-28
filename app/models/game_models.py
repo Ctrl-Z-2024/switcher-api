@@ -4,7 +4,6 @@ from app.db.db import Base
 from app.db.enums import GameStatus
 from app.models.player_models import Player
 
-
 class Game(Base):
     __tablename__ = "games"
 
@@ -23,3 +22,6 @@ class Game(Base):
     # Relacion One-to-many entre game y jugadores
     players = relationship("Player", back_populates="game", foreign_keys=[
                            Player.game_id], primaryjoin="Player.game_id == Game.id")
+    
+    # #Relacion one-to-one entre game y borad
+    board = relationship ("Board", back_populates="game", uselist=False)

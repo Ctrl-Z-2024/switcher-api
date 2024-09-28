@@ -10,3 +10,8 @@ class GameStatus(Enum):
     full = "full"
     in_game = "in game"
 
+class Colors(Enum):
+    red = "red"
+    blue = "blue"
+    yellow = "yellow"
+    green = "green"

@@ -73,7 +73,7 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
 
         expected_message = {
             "type": "game added",
-            "data": {
+            "payload": {
                 "id": 1,
                 "name": "Mock Game",
                 "player_amount": 3,

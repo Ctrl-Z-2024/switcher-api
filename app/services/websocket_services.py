@@ -35,7 +35,7 @@ class GameListManager:
         try:
             logging.debug(f"Broadcasting {m_type} message to all active connections")
             game_schema = GameSchemaList(id=game.id, name=game.name, player_amount=game.player_amount,players_connected=len(game.players))
-            message = {"type": m_type, "data": game_schema}
+            message = {"type": m_type, "payload": game_schema}
             for connection in self.active_connections:
                 await connection.send_json(jsonable_encoder(message))
         except Exception as e:

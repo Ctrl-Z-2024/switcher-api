@@ -6,6 +6,7 @@ from app.db.db import get_db
 from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
+from app.models.board import Board
 from app.dependencies.dependencies import get_game, get_player
 
 client = TestClient(app)
@@ -23,6 +24,7 @@ def mock_db_config(mock_db):
     mock_player.id = 1
     mock_player.name = "Test Player"
     mock_player.game_id = 1
+    
 
     def add_side_effect(game):
         game.status = mock_game.status
@@ -333,8 +335,112 @@ def test_quit_game_invalid_player():
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
 
-# ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
+# ------------------------------------------------- TESTS DE GET GAME -----------------------------------------------------------   
 
+def test_get_games_waiting():
+    # Crear la sesión de base de datos mock
+    mock_db = MagicMock()
+
+    # Crear juegos mock con diferentes estados
+    mock_games = [
+        Game(id=1, name="Game 1", status="waiting", host_id=1, player_turn=0, player_amount=3),
+        Game(id=2, name="Game 2", status="in_game", host_id=2, player_turn=0, player_amount=4)
+    ]
+
+    # Configurar el mock para que filtre por estado "waiting"
+    mock_db.query.return_value.filter.return_value.all.return_value = [
+        mock_games[0]
+    ]
+
+    # Sobrescribir la dependencia de get_db con la sesión mock
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    # Hacer la solicitud GET con el filtro "waiting"
+    response = client.get("/games", params={"status": "waiting"})
+
+    # Asegurarse de que la respuesta fue exitosa y contiene solo el juego con estado "waiting"
+    assert response.status_code == 200
+    assert response.json() == [{
+        "id": 1,
+        "name": "Game 1",
+        "status": "waiting",
+        "host_id": 1,
+        "player_turn": 0,
+        "player_amount": 3,
+        "players": []  # Agrega más detalles si es necesario
+    }]
+
+    # Restaurar las dependencias después de la prueba
+    app.dependency_overrides = {}
+
+def test_get_all_games():
+    # Crear la sesión de base de datos mock
+    mock_db = MagicMock()
+
+    # Crear juegos mock con diferentes estados
+    mock_games = [
+        Game(id=1, name="Game 1", status="waiting", host_id=1, player_turn=0, player_amount=3),
+        Game(id=2, name="Game 2", status="in game", host_id=2, player_turn=1, player_amount=4)
+    ]
+
+    # Configurar el mock para que devuelva todas las partidas
+    mock_db.query.return_value.all.return_value = mock_games
+
+    # Sobrescribir la dependencia de get_db con la sesión mock
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    # Hacer la solicitud GET sin filtro
+    response = client.get("/games")
+
+    # Asegurarse de que la respuesta fue exitosa y contiene todos los juegos
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 1,
+            "name": "Game 1",
+            "status": "waiting",
+            "host_id": 1,
+            "player_turn": 0,
+            "player_amount": 3,
+            "players": []
+        },
+        {
+            "id": 2,
+            "name": "Game 2",
+            "status": "in game",
+            "host_id": 2,
+            "player_turn": 1,
+            "player_amount": 4,
+            "players": []
+        }
+    ]
+
+    # Restaurar las dependencias después de la prueba
+    app.dependency_overrides = {}
+
+def test_get_games_invalid_status():
+    # Crear la sesión de base de datos mock
+    mock_db = MagicMock()
+
+    # Configurar el mock para que no devuelva ninguna partida
+    mock_db.query.return_value.filter.return_value.all.return_value = []
+
+    # Sobrescribir la dependencia de get_db con la sesión mock
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    # Hacer la solicitud GET con un estado que no existe
+    response = client.get("/games", params={"status": "non_existent_status"})
+
+    # Asegurarse de que la respuesta es 404 ya que no hay partidas con ese estado
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "No games found"
+    }
+
+    # Restaurar las dependencias después de la prueba
+    app.dependency_overrides = {}
+
+ # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
 
 def test_start_game():
     mock_db = MagicMock()

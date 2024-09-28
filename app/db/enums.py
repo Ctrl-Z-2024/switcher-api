@@ -19,3 +19,8 @@ class MovementType (Enum):
    CRUCE_L_IZQUIERDA_CON_2_ESPACIOS= "cruce en L hacia la izquierda con 2 espacios"
    CRUCE_LINEAL_AL_LATERAL= "cruce en linea al lateral"
    
+class Colors(Enum):
+    red = "red"
+    blue = "blue"
+    yellow = "yellow"
+    green = "green"

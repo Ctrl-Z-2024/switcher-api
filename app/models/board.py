@@ -1,23 +1,15 @@
 from app.db.db import Base
 from app.db.enums import Colors
-#from app.models.game import Game
 from sqlalchemy import Column, Integer, ForeignKey, JSON
 from sqlalchemy.orm import relationship
+from app.models.game_models import Game
 import numpy as np
 import random
-
-################################## PARA TESTEAR ##################################
-class Game(Base):
-    __tablename__ = "game" 
-
-    id = Column (Integer, primary_key=True, index=True, autoincrement=True)
-    board = relationship ("Board", back_populates="game", uselist=False)
-####################################################################################
 
 class Board(Base):
     __tablename__ = "board"
 
-    game_id = Column (Integer, ForeignKey("game.id"), primary_key=True)
+    game_id = Column (Integer, ForeignKey("games.id"), primary_key=True)
     color_distribution = Column(JSON, nullable=True) #Almacena la matriz como un JSON
     
     #Relacion one-to-one entre game y borad

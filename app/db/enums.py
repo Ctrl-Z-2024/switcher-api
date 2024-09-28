@@ -11,6 +11,11 @@ class GameStatus(Enum):
     in_game = "in game"
 
 class MovementType (Enum):
-    LINEAR = "linear"
-    DIAGONAL = "diagonal"
-    LATERAL_CROSSING = "lateral line crossing"
+   CRUCE_LINEAL_CONTIGUO= "cruce en linea contiguo"
+   CRUCE_LINEAL_CON_UN_ESPACIO= "cruce en linea con un espacio"
+   CRUCE_DIAGONAL_CONTIGUO= "cruce diagonal contiguo"
+   CRUCE_DIAGONAL_CON_UN_ESPACIO= "cruce diagonal con un espacio"
+   CRUCE_L_DERECHA_CON_2_ESPACIOS= "cruce en L hacia la derecha con 2 espacios"
+   CRUCE_L_IZQUIERDA_CON_2_ESPACIOS= "cruce en L hacia la izquierda con 2 espacios"
+   CRUCE_LINEAL_AL_LATERAL= "cruce en linea al lateral"
+   

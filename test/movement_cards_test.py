@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 def test_init_movement_card():
   
     player_id = 1
-    movement_type = MovementType.LINEAR
+    movement_type = MovementType.CRUCE_LINEAL_CONTIGUO
     movement_card = MovementCard(associated_player=player_id, movement_type=movement_type, in_hand=False)
 
    

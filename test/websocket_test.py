@@ -21,7 +21,7 @@ def mock_websocket():
 
 @pytest.fixture
 def mock_game():
-    game = MagicMock(spec=Game)
+    game = MagicMock()
     game.id = 1
     game.name = "Mock Game"
     game.player_amount = 3

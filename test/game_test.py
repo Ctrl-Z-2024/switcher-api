@@ -6,7 +6,7 @@ from app.db.db import get_db
 from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
-from app.models.board import Board
+from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, get_player
 
 client = TestClient(app)

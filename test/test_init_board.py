@@ -1,9 +1,9 @@
-from app.models.board import Board
+from app.models.board_models import Board
 from app.db.enums import Colors
 from typing import Counter
 from unittest.mock import MagicMock, patch
 
-@patch('app.models.board.random.shuffle')
+@patch('app.models.board_models.random.shuffle')
 def test_init_board(mocked_random_distribution):
     #Definir un game_id para el tablero
     game_id = 1

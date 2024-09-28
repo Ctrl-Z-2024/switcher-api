@@ -32,10 +32,8 @@ class GameSchemaOut(BaseModel):
     def get_players_connected(self) -> int:
         return len(self.players)
 
-class GameSchemaList(GameSchemaOut):
+class GameSchemaList(BaseModel):
+    id: int
+    name: str
+    player_amount: int
     players_connected: int
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.players_connected = self.get_players_connected()
-    

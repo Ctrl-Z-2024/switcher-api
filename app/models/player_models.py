@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import PlayerState
+from app.models.movement_card_model import MovementCard  
 
 class Player(Base):
     __tablename__ = "player"
@@ -14,3 +15,5 @@ class Player(Base):
     #relation many-to-one between player and game
     game_id = Column(Integer, ForeignKey("game.id"), nullable = True, default = None)
     game = relationship("Game", back_populates="players", foreign_keys=[game_id], primaryjoin="Player.game_id == Game.id")
+
+    movement_cards = relationship("MovementCard", back_populates="player", foreign_keys=[MovementCard.associated_player], primaryjoin="Player.id == MovementCard.associated_player")

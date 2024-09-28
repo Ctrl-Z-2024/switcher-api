@@ -2,6 +2,7 @@ from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session
 from app.db.db import get_db
+from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.models.board import Board
@@ -75,7 +76,7 @@ def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), res
 
     validate_players_amount(game)
     shuffle_players(game)
-    game.status= "in game" 
+    game.status=  GameStatus.in_game
 
     board = Board(game.id)
     db.add(board)

@@ -1,5 +1,6 @@
 import re
-from fastapi import HTTPException, status, Depends, Body
+from fastapi import HTTPException, status, Depends, Body, Query
+from typing import Optional
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game_models import Game
@@ -36,3 +37,10 @@ def get_game(id_game: int, db: Session = Depends(get_db)) -> Game:
 
     return game
 
+def get_game_status(status: Optional[str] = Query(None, description="Filtra juegos por estado: (waiting, in_game, finished)")):
+    valid_status = ["waiting", "in_game", "finished"]
+    
+    if status and status not in valid_status:
+        raise HTTPException(status_code=404, detail="No games found")
+    
+    return status

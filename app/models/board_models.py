@@ -9,7 +9,7 @@ import random
 class Board(Base):
     __tablename__ = "board"
 
-    game_id = Column (Integer, ForeignKey("games.id"), primary_key=True)
+    game_id = Column (Integer, ForeignKey("game.id"), primary_key=True)
     color_distribution = Column(JSON, nullable=True) #Almacena la matriz como un JSON
     
     #Relacion one-to-one entre game y borad

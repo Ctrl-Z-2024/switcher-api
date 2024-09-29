@@ -5,7 +5,7 @@ from app.db.enums import MovementType
 
 
 class MovementCard(Base):
-    __tablename__ = "movement_cards"
+    __tablename__ = "movement_card"
 
     id = Column(Integer, primary_key=True, index=True)
     movement_type = Column(Enum(MovementType), nullable=False)

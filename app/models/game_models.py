@@ -5,7 +5,7 @@ from app.db.enums import GameStatus
 from app.models.player_models import Player
 
 class Game(Base):
-    __tablename__ = "games"
+    __tablename__ = "game"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(20), index=True, nullable=False)

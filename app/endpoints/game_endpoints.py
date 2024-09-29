@@ -55,7 +55,7 @@ async def join_game(game: Game = Depends(get_game), player: Player = Depends(get
     """
     validate_game_capacity(game)
 
-    await game_connection_manager.broadcast_connection(game_id=game.id, player_id=player.id, player_name=player.name)
+    await game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name)
 
 
     add_player_to_game(game, player, db)
@@ -76,9 +76,10 @@ async def quit_game(id_player: int, game: Game = Depends(get_game), db: Session 
 
     remove_player_from_game(player, game, db)
 
-    await game_connection_manager.broadcast_disconnection(game_id=game.id, player_id=player.id, player_name=player.name)
+    await game_connection_manager.broadcast_disconnection(game=game, player_id=player.id, player_name=player.name)
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
+
 
 @router.put("/{id_game}/start")
 def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), response_model=GameSchemaOut):

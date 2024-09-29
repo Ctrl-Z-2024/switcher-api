@@ -12,6 +12,7 @@ import pytest
 import asyncio
 import json
 from app.endpoints.websocket_endpoints import game_list_manager, game_connection_manager
+from app.services.game_services import convert_game_to_schema
 
 client = TestClient(app)
 
@@ -25,6 +26,8 @@ def mock_game():
     game.id = 1
     game.name = "Mock Game"
     game.player_amount = 3
+    game.host_id = 1
+    game.player_turn = 0
     game.players = []
     game.status = GameStatus.waiting
     return game
@@ -78,17 +81,11 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
 
     with patch.object(mock_websocket, "send_json") as mock_send_json:
         await game_list_manager.connect(mock_websocket)
-
+        mock_game_schema = convert_game_to_schema(mock_game)
         expected_message = {
             "type": "game added",
             "message": "",
-            "payload": {
-                "id": 1,
-                "name": "Mock Game",
-                "player_amount": 3,
-                "players_connected": 0,
-                "status": GameStatus.waiting.value
-            }
+            "payload": mock_game_schema
         }
         expected_message_json = jsonable_encoder(expected_message)
 
@@ -118,13 +115,7 @@ async def test_multiple_broadcasting(mock_websocket, mock_game):
         expected_message = {
             "type": "game added",
             "message": "",
-            "payload": {
-                "id": 1,
-                "name": "Mock Game",
-                "player_amount": 3,
-                "players_connected": 0,
-                "status": GameStatus.waiting
-            }
+            "payload": convert_game_to_schema(mock_game)
         }
         expected_message_json = jsonable_encoder(expected_message)
 
@@ -213,16 +204,13 @@ async def test_broadcast_connection(mock_websocket, mock_game):
 
     expected_message = {
         "type": "player connected",
-        "message": "Mock player has joined the game",
-        "payload": {
-            "id": 1,
-            "name": "Mock player"
-        }
+        "message": "Mock player (id: 1) has joined the game",
+        "payload": convert_game_to_schema(mock_game)
     }
     expected_message_json = jsonable_encoder(expected_message)
 
     with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
-        await game_connection_manager.broadcast_connection(game_id=mock_game.id, player_id=1, player_name="Mock player")
+        await game_connection_manager.broadcast_connection(game=mock_game, player_id=1, player_name="Mock player")
 
         mock_send_json.assert_called_once()
         mock_send_json2.assert_called_once()
@@ -244,16 +232,13 @@ async def test_broadcast_disconnection(mock_websocket, mock_game):
 
     expected_message = {
         "type": "player disconnected",
-        "message": "Mock player has left the game",
-        "payload": {
-            "id": 1,
-            "name": "Mock player"
-        }
+        "message": "Mock player (id: 1) has left the game",
+        "payload": convert_game_to_schema(mock_game)
     }
     expected_message_json = jsonable_encoder(expected_message)
 
     with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
-        await game_connection_manager.broadcast_disconnection(game_id=mock_game.id, player_id=1, player_name="Mock player")
+        await game_connection_manager.broadcast_disconnection(game=mock_game, player_id=1, player_name="Mock player")
 
         mock_send_json.assert_called_once()
         mock_send_json2.assert_called_once()

@@ -1,6 +1,7 @@
 from fastapi import WebSocket, WebSocketException
 from fastapi.encoders import jsonable_encoder
-from app.schemas.game_schemas import GameSchemaList
+from app.schemas.game_schemas import GameSchemaOut
+from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
 
 
@@ -31,7 +32,7 @@ class GameListManager:
         Broadcast a game to all active connections.
         """
         try:
-            game_schema = GameSchemaList(id=game.id, name=game.name, player_amount=game.player_amount,status=game.status,players_connected=len(game.players))
+            game_schema = convert_game_to_schema(game)
             event = {"type": m_type, "message": message,"payload": game_schema}
             for connection in self.active_connections:
                 await connection.send_json(jsonable_encoder(event))
@@ -90,25 +91,21 @@ class GameConnectionsManager:
 
 
 
-    async def broadcast_disconnection(self, game_id: int, player_id: int, player_name: str):
+    async def broadcast_disconnection(self, game: Game, player_id: int, player_name: str):
+        game_schema = convert_game_to_schema(game)
         event_message = {
             "type": "player disconnected",
-            "message": player_name + " has left the game",
-            "payload": {
-                "id": player_id,
-                "name": player_name
-            }
+            "message": player_name + " (id: " + str(player_id) + ") has left the game",
+            "payload": game_schema
         }
-        await self.broadcast(event_message, game_id)
+        await self.broadcast(event=event_message, game_id=game.id)
 
     
-    async def broadcast_connection(self, game_id: int, player_id: int, player_name: str):
+    async def broadcast_connection(self, game: Game, player_id: int, player_name: str):
+        game_schema = convert_game_to_schema(game)
         event_message = {
             "type": "player connected",
-            "message": player_name + " has joined the game",
-            "payload": {
-                "id": player_id,
-                "name": player_name
-            }
+            "message": player_name + " (id: " + str(player_id) + ") has joined the game",
+            "payload": game_schema
         }
-        await self.broadcast(event_message, game_id)
+        await self.broadcast(event=event_message, game_id=game.id)

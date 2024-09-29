@@ -37,3 +37,4 @@ class GameSchemaList(BaseModel):
     name: str
     player_amount: int
     players_connected: int
+    status: GameStatus

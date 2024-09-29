@@ -1,8 +1,7 @@
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketException
 from fastapi.encoders import jsonable_encoder
 from app.schemas.game_schemas import GameSchemaList
 from app.models.game_models import Game
-import logging
 
 
 class GameListManager:
@@ -16,7 +15,6 @@ class GameListManager:
 
         await websocket.accept()
         self.active_connections.append(websocket)
-        logging.debug(f"New connection added. Total connections: {len(self.active_connections)}")
 
     async def disconnect(self, websocket: WebSocket):
         """
@@ -24,19 +22,93 @@ class GameListManager:
         """
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            logging.debug(f"Connection removed. Total connections: {len(self.active_connections)}")
-        else :
-            logging.error("An attempt at a disconnection was made for a websocket not connected to the game list.")
+        else: 
+            raise WebSocketException(code=3003, reason="You are not connected to the game list.")
 
-    async def broadcast_game(self, m_type: str, game: Game):
+
+    async def broadcast_game(self, m_type: str, game: Game, message: str=""):
         """
         Broadcast a game to all active connections.
         """
         try:
-            logging.debug(f"Broadcasting {m_type} message to all active connections")
-            game_schema = GameSchemaList(id=game.id, name=game.name, player_amount=game.player_amount,players_connected=len(game.players), status=game.status)
-            message = {"type": m_type, "payload": game_schema}
+            game_schema = GameSchemaList(id=game.id, name=game.name, player_amount=game.player_amount,status=game.status,players_connected=len(game.players))
+            event = {"type": m_type, "message": message,"payload": game_schema}
             for connection in self.active_connections:
-                await connection.send_json(jsonable_encoder(message))
+                await connection.send_json(jsonable_encoder(event))
         except Exception as e:
-            logging.error(f"Error broadcasting message: {e}")
+            raise WebSocketException(code=1011, reason="Internal error")
+
+
+class GameConnectionsManager:
+    def __init__(self) -> None:
+        self.active_connections: dict[int, list[WebSocket]] = {}
+
+    async def add_game(self, game_id: int):
+        """
+        Add a game to the active connections list.
+        """
+        self.active_connections[game_id] = []
+
+
+    async def connect(self, websocket: WebSocket, game_id: int):
+        """
+        Add a connection to the active connections list.    
+        """
+        if game_id not in self.active_connections:
+            raise WebSocketException(code=3003, reason="Game doesn't exist")
+
+        if(len(self.active_connections[game_id]) != 4):
+            await websocket.accept()
+
+            self.active_connections[game_id].append(websocket)
+        else:
+            raise WebSocketException(code=3001, reason="Game is full")
+        
+
+    async def disconnect(self, websocket: WebSocket, game_id: int):
+        """
+        Remove a connection from the active connections list.
+        """
+        if game_id not in self.active_connections:
+            raise WebSocketException(code=3003, reason="Game doesn't exist")
+                
+        if websocket not in self.active_connections[game_id]:
+            raise WebSocketException(code=3003, reason="You are not connected to that game.")
+                
+        self.active_connections[game_id].remove(websocket)
+
+    async def broadcast(self, event: dict, game_id: int):
+        """
+        Broadcast an event to all active connections.
+        """
+        try:
+            for connection in self.active_connections[game_id]:
+                await connection.send_json(jsonable_encoder(event))
+        except Exception as e:
+            raise WebSocketException(code=1011, reason="Internal error")
+            
+
+
+
+    async def broadcast_disconnection(self, game_id: int, player_id: int, player_name: str):
+        event_message = {
+            "type": "player disconnected",
+            "message": player_name + " has left the game",
+            "payload": {
+                "id": player_id,
+                "name": player_name
+            }
+        }
+        await self.broadcast(event_message, game_id)
+
+    
+    async def broadcast_connection(self, game_id: int, player_id: int, player_name: str):
+        event_message = {
+            "type": "player connected",
+            "message": player_name + " has joined the game",
+            "payload": {
+                "id": player_id,
+                "name": player_name
+            }
+        }
+        await self.broadcast(event_message, game_id)

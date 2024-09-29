@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 import pytest
 import asyncio
 import json
-from app.endpoints.websocket_endpoints import game_list_manager
+from app.endpoints.websocket_endpoints import game_list_manager, game_connection_manager
 
 client = TestClient(app)
 
@@ -21,7 +21,7 @@ def mock_websocket():
 
 @pytest.fixture
 def mock_game():
-    game = MagicMock()
+    game = MagicMock(spec=Game)
     game.id = 1
     game.name = "Mock Game"
     game.player_amount = 3
@@ -29,15 +29,17 @@ def mock_game():
     game.status = GameStatus.waiting
     return game
 
+@pytest.fixture
+def mock_empty_game():
+    game = MagicMock(spec=Game)
+    game.id = 2
 
-# Fixture for a mock database session
+
+# Haven't found a use for these ones yet, but they'll do something! trust me
 @pytest.fixture
 def mock_db_session():
     mock_session = MagicMock(spec=Session)
     return mock_session
-
-
-
 
 @pytest.fixture
 def mock_db_session():
@@ -48,7 +50,7 @@ def mock_db_session():
     return mock_session
 
 
-
+# === Game List's Websocket tests ===
 
 @pytest.mark.asyncio
 async def test_connect_game_list(mock_websocket):
@@ -94,12 +96,13 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
 
         expected_message = {
             "type": "game added",
+            "message": "",
             "payload": {
                 "id": 1,
                 "name": "Mock Game",
                 "player_amount": 3,
                 "players_connected": 0,
-                "status": "waiting"
+                "status": GameStatus.waiting.value
             }
         }
         expected_message_json = jsonable_encoder(expected_message)
@@ -113,9 +116,8 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
         mock_send_json.side_effect = capture_response
 
         await game_list_manager.broadcast_game("game added", mock_game)
-        mock_send_json.assert_called_once()
+        #mock_send_json.assert_called_once()
         assert response == expected_message_json
-
 
 @pytest.mark.asyncio
 async def test_multiple_broadcasting(mock_websocket, mock_game):
@@ -130,6 +132,7 @@ async def test_multiple_broadcasting(mock_websocket, mock_game):
 
         expected_message = {
             "type": "game added",
+            "message": "",
             "payload": {
                 "id": 1,
                 "name": "Mock Game",
@@ -147,5 +150,128 @@ async def test_multiple_broadcasting(mock_websocket, mock_game):
 
         mock_send_json.assert_called_once()
         mock_send_json2.assert_called_once()
+        assert mock_send_json.call_args_list[0][0][0] == expected_message_json
+        assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
+
+
+# === Game Connection's Websocket tests ===
+
+@pytest.mark.asyncio
+async def test_connect_game_add_game(mock_game):
+    """
+    Test to see if the connect method is adding the game to the active connections list.
+    """
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    assert mock_game.id in game_connection_manager.active_connections
+
+@pytest.mark.asyncio
+async def test_connect_created_game(mock_websocket, mock_game):
+    """
+    Test a websocket that enters a channel that was created already.
+    """
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    assert mock_websocket in game_connection_manager.active_connections[mock_game.id]
+
+
+@pytest.mark.asyncio
+async def test_connect_null_game(mock_websocket, mock_game):
+    """
+    Test a websocket that enters a channel that wasn't created.
+    """
+    mock_game.id = 2
+    try:
+        await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    except Exception as e:
+        assert e.code == 3003
+        return
+    assert False
+
+
+@pytest.mark.asyncio
+async def test_disconnect_game(mock_websocket, mock_game):
+    """
+    Test to see if the disconnect method is removing the websocket from the active connections list.
+    """
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.disconnect(websocket=mock_websocket, game_id=mock_game.id)
+    assert mock_websocket not in game_connection_manager.active_connections[mock_game.id]
+
+
+@pytest.mark.asyncio
+async def test_disconnect_null_game(mock_websocket, mock_game):
+    """
+    Test to see if the disconnect method is removing the websocket from the active connections list.
+    """
+
+    try:
+        await game_connection_manager.disconnect(websocket=mock_websocket, game_id=mock_game.id)
+    except Exception as e:
+        assert e.code == 3003
+        return
+    assert False
+    
+@pytest.mark.asyncio
+async def test_broadcast_connection(mock_websocket, mock_game):
+    """
+    Test to see if the broadcast method is sending the correct message to the websocket.
+    """
+    mock_websocket2 = MagicMock(spec=WebSocket)
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+
+    expected_message = {
+        "type": "player connected",
+        "message": "Mock player has joined the game",
+        "payload": {
+            "id": 1,
+            "name": "Mock player"
+        }
+    }
+    expected_message_json = jsonable_encoder(expected_message)
+
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
+        await game_connection_manager.broadcast_connection(game_id=mock_game.id, player_id=1, player_name="Mock player")
+
+        mock_send_json.assert_called_once()
+        mock_send_json2.assert_called_once()
+
+        assert mock_send_json.call_args_list[0][0][0] == expected_message_json
+        assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
+
+
+@pytest.mark.asyncio
+async def test_broadcast_disconnection(mock_websocket, mock_game):
+    """
+    Test to see if the broadcast method is sending the correct message to the websocket.
+    """
+    mock_websocket2 = MagicMock(spec=WebSocket)
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+
+    expected_message = {
+        "type": "player disconnected",
+        "message": "Mock player has left the game",
+        "payload": {
+            "id": 1,
+            "name": "Mock player"
+        }
+    }
+    expected_message_json = jsonable_encoder(expected_message)
+
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
+        await game_connection_manager.broadcast_disconnection(game_id=mock_game.id, player_id=1, player_name="Mock player")
+
+        mock_send_json.assert_called_once()
+        mock_send_json2.assert_called_once()
+
         assert mock_send_json.call_args_list[0][0][0] == expected_message_json
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json

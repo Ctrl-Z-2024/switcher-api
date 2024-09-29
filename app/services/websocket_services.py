@@ -109,3 +109,12 @@ class GameConnectionsManager:
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)
+
+    async def broadcast_game_start(self, game: Game):
+        game_schema = convert_game_to_schema(game)
+        event_message = {
+            "type": "game started",
+            "message": "",
+            "payload": game_schema
+        }
+        await self.broadcast(event=event_message, game_id=game.id)

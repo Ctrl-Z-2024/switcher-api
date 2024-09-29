@@ -81,12 +81,15 @@ async def quit_game(id_player: int, game: Game = Depends(get_game), db: Session 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
 
-@router.put("/{id_game}/start")
-def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), response_model=GameSchemaOut):
+@router.put("/{id_game}/start", summary="Start a game")
+async def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db)):
+
+    await game_connection_manager.broadcast_game_start(game=game) 
 
     validate_players_amount(game)
     shuffle_players(game)
     game.status=  GameStatus.in_game
+
 
     board = Board(game.id)
     db.add(board)
@@ -95,6 +98,8 @@ def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), res
 
     game_out= convert_game_to_schema(game)
     db.commit()
+    
+    
     return {"message": "La partida ha comenzado", "game": game_out}
 
 @router.get("/", response_model=List[GameSchemaOut], summary="Get games filtered by status")

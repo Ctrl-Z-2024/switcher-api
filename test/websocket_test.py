@@ -245,3 +245,32 @@ async def test_broadcast_disconnection(mock_websocket, mock_game):
 
         assert mock_send_json.call_args_list[0][0][0] == expected_message_json
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
+
+
+
+@pytest.mark.asyncio
+async def test_broadcast_start(mock_websocket,mock_game):
+
+    mock_websocket2 = MagicMock(spec=WebSocket)
+
+    await game_connection_manager.add_game(game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+
+    mock_game.status = GameStatus.in_game
+
+    expected_message = {
+        "type": "game started",
+        "message": "",
+        "payload": convert_game_to_schema(mock_game)
+    }
+    expected_message_json = jsonable_encoder(expected_message)
+
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
+        await game_connection_manager.broadcast_game_start(game=mock_game)
+
+        mock_send_json.assert_called_once()
+        mock_send_json2.assert_called_once()
+
+        assert mock_send_json.call_args_list[0][0][0] == expected_message_json
+        assert mock_send_json2.call_args_list[0][0][0] == expected_message_json

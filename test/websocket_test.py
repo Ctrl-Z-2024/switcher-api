@@ -35,21 +35,6 @@ def mock_empty_game():
     game.id = 2
 
 
-# Haven't found a use for these ones yet, but they'll do something! trust me
-@pytest.fixture
-def mock_db_session():
-    mock_session = MagicMock(spec=Session)
-    return mock_session
-
-@pytest.fixture
-def mock_db_session():
-    mock_session = MagicMock(spec=Session)
-    mock_session.commit.return_value = None
-    mock_session.add.return_value = None
-    mock_session.refresh.return_value = None
-    return mock_session
-
-
 # === Game List's Websocket tests ===
 
 @pytest.mark.asyncio

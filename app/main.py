@@ -12,8 +12,6 @@ app = FastAPI(
     title="El Switcher API documentation",
 )
 
-Base.metadata.create_all(bind=engine)
-
 app.include_router(router=game_endpoints.router)
 app.include_router(router=player_endpoints.router)
 app.include_router(router=websocket_endpoints.router)

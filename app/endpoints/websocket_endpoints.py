@@ -47,7 +47,7 @@ def handle_change(mapper, connection, target: Game):
     asyncio.run_coroutine_threadsafe(game_list_manager.broadcast_game("game updated", target), loop)
 
 
-@router.websocket("/list")
+@router.websocket("ws/list")
 async def list(websocket: WebSocket, db: Session = Depends(get_db)):
     await game_list_manager.connect(websocket)
     try:
@@ -57,7 +57,7 @@ async def list(websocket: WebSocket, db: Session = Depends(get_db)):
         await game_list_manager.disconnect(websocket)
 
 
-@router.websocket("/game/{game_id}")
+@router.websocket("ws/game/{game_id}")
 async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
     await game_connection_manager.connect(websocket, game_id)
     try:

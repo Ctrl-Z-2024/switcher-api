@@ -58,51 +58,20 @@ def handle_change(mapper, connection, target: Game):
 
 @router.websocket("/ws/list")
 async def list(websocket: WebSocket, db: Session = Depends(get_db)):
-    db: Session = next(get_db())
-
-    # extract token from header `Authorization`
-    token = websocket.headers.get("Authorization")
-
-    if token is None or not token.startswith("Bearer "):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    token = token.split(" ")[1]  # delete prefix "Bearer"
-
+    await game_list_manager.connect(websocket)
     try:
-        await verify_token_in_db(token, db)
-        await game_list_manager.connect(websocket)
-        try:
-            while True:
-                data = await websocket.receive_text()
-        except WebSocketDisconnect:
-            await game_list_manager.disconnect(websocket)
-    except HTTPException as e:
-        # close connection if token is invalid
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        await game_list_manager.disconnect(websocket)
+
 
 
 @router.websocket("/ws/game/{game_id}")
 async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
-    db: Session = next(get_db())
-
-    # extract token from header `Authorization`
-    token = websocket.headers.get("Authorization")
-
-    if token is None or not token.startswith("Bearer "):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    token = token.split(" ")[1]  # delete prefix "Bearer"
-
+    await game_connection_manager.connect(websocket, game_id)
     try:
-        await verify_token_in_db(token, db)
-        await game_connection_manager.connect(websocket, game_id)
-        try:
-            while True:
-                data = await websocket.receive_text()
-        except WebSocketDisconnect:
-            await game_list_manager.disconnect(websocket)
-    except HTTPException as e:
-        # close connection if token is invalid
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        await game_list_manager.disconnect(websocket)

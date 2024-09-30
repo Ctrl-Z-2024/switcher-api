@@ -1,51 +1,54 @@
 # El Switcher - API REST
 API del juego de mesa "El Switcher" implementada con FastAPI.
 
-## Instalación
-Primero debemos tener instalado Python (seguir la [documentación oficial](https://www.python.org/)) y debemos crear un entorno virtual python ([ejemplo](https://sasheshsingh.medium.com/a-beginners-guide-of-installing-virtualenvwrapper-on-ubuntu-ce6259e4d609)) para poder correr el proyecto e instalar las librerias necesarias.
+## Requisitos previos
+Antes de comenzar, asegúrate de tener **Python** instalado. Puedes seguir la [documentación oficial de Python](https://www.python.org/) para la instalación. Además, es recomendable crear un entorno virtual para gestionar las dependencias del proyecto, puedes seguir este [tutorial](https://sasheshsingh.medium.com/a-beginners-guide-of-installing-virtualenvwrapper-on-ubuntu-ce6259e4d609) para configurar un entorno virtual en Python.
 
-Clonamos el repositorio y nos movemos al directorio:
+## Instalación
+
+Clona el repositorio y navega al directorio del proyecto:
+
 ```bash
 $ git clone https://github.com/Ctrl-Z-2024/switcher-api.git
 $ cd switcher-api
 ```
-Ahora activamos nuestro entorno virtual python e instalamos las librerias:
+
+### Configuración del entorno virtual
+Activa tu entorno virtual y luego instala las librerías necesarias:
 ```bash
 (env) $ pip install -r requirements.txt
 ```
-Así ya tenemos las librerias necesarias instaladas y podemos proceder a levantar la aplicación.
+Una vez hecho esto, tendrás todas las dependencias instaladas para ejecutar la aplicación.
 
-## Levantamos la app
-Para levantar la aplicación, nos movemos al directorio:
+## Ejecutar la aplicación
+Para ejecutar la API, navega al directorio `app/` y ejecuta el servidor con Uvicorn:
 ```bash
 (env) $ cd app
-```
-Una vez en app, levantamos el servidor con el siguiente comando:
-```bash
 (env) $ uvicorn main:app --port <puerto> --reload
 ```
-Y listo!
+Esto iniciará el servidor en el puerto especificado. Si no defines un puerto, el servidor usará el puerto por defecto `8000`.
 
-## Accediendo a la API
-Una vez que levantemos el servidor, podemos acceder a la API a través de la URL devuelta por uvicorn, por ejemplo `http://127.0.0.1:8000` es la URL por defecto. FastAPI nos brinda una documentación detallada de la API gracias a [Swagger UI](https://swagger.io/tools/swagger-ui/). A esta documentación podemos acceder desde `http://<direccion>:<puerto>/docs`.
+## Acceso a la API
+Una vez que el servidor esté corriendo, puedes acceder a la API a través de la URL mostrada en la consola, por defecto será `http://127.0.0.1:8000`.
+
+FastAPI proporciona una documentación interactiva a través de [Swagger UI](https://swagger.io/tools/swagger-ui/), accesible en:
+```http
+http://<direccion>:<puerto>/docs
+```
 
 ## Uso de la API
-Para usar la API podemos directamente ir a la documentacion (`/docs`) y ahi mismo comenzar a hacer requests.
-
-Otra manera de usar la API es desde Postman haciendo requests a los endpoints especificados en la documentación.
-
-Pero también podemos hacer requests desde cualquier entorno que lo permita (curl, JavaScript, etc).
+Puedes utilizar la API directamente desde la interfaz de Swagger UI o enviar solicitudes desde herramientas como **Postman**, **curl** o desde cualquier lenguaje que soporte HTTP.
 
 ## Testing
-Para testear la aplicación, vamos a pararnos en el directorio principal (`switcher-api`) y vamos a ir al directorio `/test`:
+Para ejecutar los tests, ubícate en el directorio principal del proyecto (`switcher-api`) y navega al directorio `/test`:
 ```bash
 (env) $ cd test
 ```
-Luego, corremos los tests con el siguiente comando:
+Luego, ejecuta los tests con el siguiente comando:
 ```bash
 (env) $ pytest <archivo>.py
 ```
-O para correr un test en específico:
+Para ejecutar un test específico:
 ```bash
 (env) $ pytest <archivo>.py::<test-especifico>
 ```

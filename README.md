@@ -32,7 +32,7 @@ Esto iniciará el servidor en el puerto especificado. Si no defines un puerto, e
 Una vez que el servidor esté corriendo, puedes acceder a la API a través de la URL mostrada en la consola, por defecto será `http://127.0.0.1:8000`.
 
 FastAPI proporciona una documentación interactiva a través de [Swagger UI](https://swagger.io/tools/swagger-ui/), accesible en:
-```http
+```php
 http://<direccion>:<puerto>/docs
 ```
 

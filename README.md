@@ -21,12 +21,29 @@ Activa tu entorno virtual y luego instala las librerías necesarias:
 Una vez hecho esto, tendrás todas las dependencias instaladas para ejecutar la aplicación.
 
 ## Ejecutar la aplicación
-Para ejecutar la API, navega al directorio `app/` y ejecuta el servidor con Uvicorn:
+Para ejecutar la API, navega al directorio app/ y ejecuta el servidor con FastAPI CLI:
+
 ```bash
 (env) $ cd app
-(env) $ uvicorn main:app --port <puerto> --reload
+(env) $ fastapi dev main.py --reload --port <puerto>
 ```
+
 Esto iniciará el servidor en el puerto especificado. Si no defines un puerto, el servidor usará el puerto por defecto `8000`.
+
+### Opciones adicionales
+Además del comando `dev`, FastAPI CLI ofrece varias otras opciones útiles:
+
+1. `fastapi run`: Similar a uvicorn, pero con algunas configuraciones adicionales específicas de FastAPI.
+   
+2. `fastapi build`: Para construir la aplicación en un formato que pueda ser desplegado en producción.
+   
+3. `fastapi test`: Para ejecutar pruebas automatizadas de tu aplicación.
+   
+4. `fastapi docs`: Para generar documentación de tu API en diferentes formatos.
+   
+### Parámetro `<puerto>`
+
+El parámetro `<puerto>` es opcional. Si no lo especificas, el servidor usará el puerto por defecto `8000`.
 
 ## Acceso a la API
 Una vez que el servidor esté corriendo, puedes acceder a la API a través de la URL mostrada en la consola, por defecto será `http://127.0.0.1:8000`.

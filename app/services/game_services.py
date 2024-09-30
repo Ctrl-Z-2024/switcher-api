@@ -16,7 +16,8 @@ def validate_game_capacity(game: Game):
 
 def add_player_to_game(game: Game, player: Player, db: Session):
     """impact changes to de database"""
-    game.players.append(player)
+    m_player = db.merge(player)
+    game.players.append(m_player)
     db.commit()
     db.refresh(game)
 
@@ -66,6 +67,7 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
     """
     Deletes a player.
     """
+    m_player = db.merge(player)
     game.players.remove(player)
     update_game_in_db(db, game)
 
@@ -86,6 +88,5 @@ def validate_players_amount(game: Game):
 
 
 def shuffle_players(game: Game):
-
     random.shuffle(game.players)
     game.player_turn = 0

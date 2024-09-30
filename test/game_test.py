@@ -60,6 +60,8 @@ def test_create_game():
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[auth_scheme] = lambda: mock_player
+    
+    mock_db.merge.return_value = mock_player
 
     new_game_data = {
         "name": "Test Game",
@@ -178,6 +180,8 @@ def test_join_game():
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_player
+        
+        mock_db.merge.return_value = mock_player
 
         # Make the PUT request using the test client
         response = client.put(

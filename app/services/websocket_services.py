@@ -23,17 +23,18 @@ class GameListManager:
         """
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-        else: 
-            raise WebSocketException(code=3003, reason="You are not connected to the game list.")
+        else:
+            raise WebSocketException(
+                code=3003, reason="You are not connected to the game list.")
 
-
-    async def broadcast_game(self, m_type: str, game: Game, message: str=""):
+    async def broadcast_game(self, m_type: str, game: Game, message: str = ""):
         """
         Broadcast a game to all active connections.
         """
         try:
             game_schema = convert_game_to_schema(game)
-            event = {"type": m_type, "message": message,"payload": game_schema}
+            event = {"type": m_type, "message": message,
+                     "payload": game_schema}
             for connection in self.active_connections:
                 await connection.send_json(jsonable_encoder(event))
         except Exception as e:
@@ -50,7 +51,6 @@ class GameConnectionsManager:
         """
         self.active_connections[game_id] = []
 
-
     async def connect(self, websocket: WebSocket, game_id: int):
         """
         Add a connection to the active connections list.    
@@ -58,13 +58,12 @@ class GameConnectionsManager:
         if game_id not in self.active_connections:
             raise WebSocketException(code=3003, reason="Game doesn't exist")
 
-        if(len(self.active_connections[game_id]) != 4):
+        if (len(self.active_connections[game_id]) != 4):
             await websocket.accept()
 
             self.active_connections[game_id].append(websocket)
         else:
             raise WebSocketException(code=3001, reason="Game is full")
-        
 
     async def disconnect(self, websocket: WebSocket, game_id: int):
         """
@@ -72,10 +71,11 @@ class GameConnectionsManager:
         """
         if game_id not in self.active_connections:
             raise WebSocketException(code=3003, reason="Game doesn't exist")
-                
+
         if websocket not in self.active_connections[game_id]:
-            raise WebSocketException(code=3003, reason="You are not connected to that game.")
-                
+            raise WebSocketException(
+                code=3003, reason="You are not connected to that game.")
+
         self.active_connections[game_id].remove(websocket)
 
     async def broadcast(self, event: dict, game_id: int):
@@ -87,9 +87,6 @@ class GameConnectionsManager:
                 await connection.send_json(jsonable_encoder(event))
         except Exception as e:
             raise WebSocketException(code=1011, reason="Internal error")
-            
-
-
 
     async def broadcast_disconnection(self, game: Game, player_id: int, player_name: str):
         game_schema = convert_game_to_schema(game)
@@ -100,7 +97,6 @@ class GameConnectionsManager:
         }
         await self.broadcast(event=event_message, game_id=game.id)
 
-    
     async def broadcast_connection(self, game: Game, player_id: int, player_name: str):
         game_schema = convert_game_to_schema(game)
         event_message = {

@@ -7,7 +7,7 @@ from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.models.board_models import Board
-from app.dependencies.dependencies import get_game, get_player
+from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 
 client = TestClient(app)
@@ -260,8 +260,9 @@ def test_quit_game():
     mock_game = Game(id=1, name="gametest", player_amount=4, status="in game",
                      host_id=2, player_turn=2, players=mock_list_players)
 
-    mock_player = mock_list_players[0]  # Jugador Juan quiere abandonar
-
+    mock_player = mock_list_players[0]  # Juan quiere abandonar
+    mock_db.merge.return_value = mock_player
+ 
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
@@ -308,6 +309,7 @@ def test_quit_game_host_cannot_leave():
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
+
     app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la petición PUT con el cliente de prueba
@@ -333,13 +335,15 @@ def test_quit_game_invalid_player():
         Player(id=2, name="Pedro")
     ]
 
+    mock_player = Player(id=3, name="Maria")  # Jugador que no está en la partida
+
     mock_game = Game(id=1, players=mock_list_players,
                      player_amount=4, host_id=2)
 
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[auth_scheme] = lambda: None
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la petición PUT con el cliente de prueba usando un id de jugador que no existe
     response = client.put(

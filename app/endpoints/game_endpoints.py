@@ -30,13 +30,12 @@ async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials =
     )
     
     m_player = db.merge(player)
-    
     new_game.players.append(m_player)
 
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
-
+    
     await game_connection_manager.add_game(new_game.id)
 
     return new_game
@@ -54,10 +53,10 @@ async def join_game(game: Game = Depends(get_game), player: HTTPAuthorizationCre
     """
     validate_game_capacity(game)
 
-    await game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name)
-
     add_player_to_game(game, player, db)
 
+    await game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name)
+    
     game_out = convert_game_to_schema(game)
 
     return {"message": f"{player.name} se unido a la partida", "game": game_out}
@@ -68,7 +67,7 @@ async def quit_game(player: HTTPAuthorizationCredentials = Depends(auth_scheme),
 
     search_player_in_game(player, game)
 
-    if is_player_host(player, game):
+    if is_player_host(player, game) and not game.status == GameStatus.in_game:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="El jugador es el host, no puede abandonar")
 
@@ -94,7 +93,6 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
     db.refresh(board)
 
     game_out = convert_game_to_schema(game)
-    db.commit()
 
     return {"message": "La partida ha comenzado", "game": game_out}
 
@@ -119,7 +117,7 @@ def get_games(
     else:
         games = db.query(Game).all()
 
-    if not games:
-        raise HTTPException(status_code=404, detail="No games found")
+    # if not games:
+    #     raise HTTPException(status_code=404, detail="No games found")
 
     return games

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game_models import Game
 from app.services.websocket_services import GameListManager, GameConnectionsManager
-from app.services.auth_services import verify_token_in_db
+from app.dependencies.dependencies import get_game
 import asyncio
 import logging
 import threading
@@ -70,8 +70,20 @@ async def list(websocket: WebSocket, db: Session = Depends(get_db)):
 @router.websocket("/ws/game/{game_id}")
 async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
     await game_connection_manager.connect(websocket, game_id)
+    
+    game = get_game(game_id, db)
+    
+    await game_connection_manager.broadcast_initial_game_connection(game)
+    
     try:
         while True:
             data = await websocket.receive_text()
     except WebSocketDisconnect:
+        logging.debug(f"{websocket} disconnected. List of remaining websockets: {game_connection_manager.active_connections}")
         await game_list_manager.disconnect(websocket)
+    except Exception as e:
+        logging.error(f"Error in websocket connection: {e}")
+        await game_connection_manager.disconnect(websocket)
+
+
+

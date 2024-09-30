@@ -75,7 +75,7 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
 
 def convert_game_to_schema(game: Game) -> GameSchemaOut:
     """return the schema view of Game"""
-    game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status,
+    game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status.value,
                              host_id=game.host_id, player_turn=game.player_turn)
     game_out.players = [PlayerSchemaOut(
         id=pl.id, name=pl.name, game_id=pl.game_id) for pl in game.players]

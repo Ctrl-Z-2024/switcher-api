@@ -3,10 +3,9 @@ from sqlalchemy.orm import Session
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
-from app.schemas.player_schemas import PlayerSchemaOut
+from app.schemas.player_schemas import PlayerGameSchemaOut
+from  app.db.enums import GameStatus
 import random
-
-
 
 def validate_game_capacity(game: Game):
     """validates if the player can join the game based on the capacity set by the host"""
@@ -17,7 +16,12 @@ def validate_game_capacity(game: Game):
 
 def add_player_to_game(game: Game, player: Player, db: Session):
     """impact changes to de database"""
-    game.players.append(player)
+    m_player = db.merge(player)
+    game.players.append(m_player)
+    
+    if len(game.players) == game.player_amount:
+        game.status = GameStatus.full
+    
     db.commit()
     db.refresh(game)
 
@@ -28,27 +32,25 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
                              host_id=game.host_id, player_turn=game.player_turn, status=game.status)
 
 
-def search_player_in_game(id_player: int, game: Game) -> Player:
+def search_player_in_game(player: Player, game: Game):
     """
     Searchs for a player inside the game.
     Handle exception if the player is not inside the game.
     """
-    player = next(
-        (item for item in game.players if item.id == id_player), None)
-
-    if not player:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="El jugador no esta en la partida")
-
-    return player
+    for pl in game.players:
+        if pl.id == player.id:
+            return
+        
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="El jugador no esta en la partida")
 
 
-def is_player_host(id_player: int, game: Game) -> bool:
+def is_player_host(player: Player, game: Game) -> bool:
     """
     Checks if the player is the game host.
     Returns true if the player is the game host, if not returns false.
     """
-    return id_player == game.host_id
+    return player.id == game.host_id
 
 
 def update_game_in_db(db: Session, game: Game):
@@ -69,26 +71,33 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
     """
     Deletes a player.
     """
-    game.players.remove(player)
+    m_player = db.merge(player)
+
+    m_player.game_id = None
+    
+    if(len(game.players) == game.player_amount):
+        game.status = GameStatus.waiting
+    
+    game.players.remove(m_player)
+    
     update_game_in_db(db, game)
 
 
 def convert_game_to_schema(game: Game) -> GameSchemaOut:
     """return the schema view of Game"""
-    game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status.value,
+    game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status,
                              host_id=game.host_id, player_turn=game.player_turn)
-    game_out.players = [PlayerSchemaOut(
-        id=pl.id, name=pl.name, game_id=pl.game_id) for pl in game.players]
+    game_out.players = [PlayerGameSchemaOut(
+        id=pl.id, name=pl.name) for pl in game.players]
     return game_out
 
-def validate_players_amount(game:Game):
+
+def validate_players_amount(game: Game):
     if len(game.players) != game.player_amount:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail="La partida requiere la cantidad de jugadores especificada para ser iniciada")
-    
-def shuffle_players (game:Game):
 
-    random.shuffle (game.players)
-    game.player_turn=0
-    
-    
+
+def shuffle_players(game: Game):
+    random.shuffle(game.players)
+    game.player_turn = 0

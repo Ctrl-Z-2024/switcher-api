@@ -25,21 +25,15 @@ Para ejecutar la API, navega al directorio app/ y ejecuta el servidor con FastAP
 
 ```bash
 (env) $ cd app
-(env) $ fastapi dev main.py
+(env) $ fastapi run main.py
 ```
 
 Esto iniciará el servidor. Si quieres especificar un puerto, puedes agregar `--port <numero de puerto>`.
 
-### Opciones adicionales
-Además del comando `dev`, FastAPI CLI ofrece varias otras opciones útiles:
-
-1. `fastapi run`: Similar a uvicorn, pero con algunas configuraciones adicionales específicas de FastAPI.
-   
-2. `fastapi build`: Para construir la aplicación en un formato que pueda ser desplegado en producción.
-   
-3. `fastapi test`: Para ejecutar pruebas automatizadas de tu aplicación.
-   
-4. `fastapi docs`: Para generar documentación de tu API en diferentes formatos.
+Si quieres iniciar el servidor en modo desarrollo, deberás ejecutarlo de la siguiente manera:
+```bash
+(env) $ fastapi dev main.py
+```
 
 ## Acceso a la API
 Una vez que el servidor esté corriendo, puedes acceder a la API a través de la URL mostrada en la consola, por defecto será `http://0.0.0.0:8000`.

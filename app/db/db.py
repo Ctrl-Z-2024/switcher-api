@@ -10,6 +10,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+# Base.metadata.create_all(bind=engine) #! TO FIX: Setting this function here doesn't define the database.
+
 def get_db():
     db = SessionLocal()
     try:

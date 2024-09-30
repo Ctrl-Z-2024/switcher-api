@@ -1,5 +1,5 @@
 import random
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
@@ -8,6 +8,7 @@ from app.models.game_models import Game
 from app.models.player_models import Player
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, get_player
+from app.endpoints.game_endpoints import auth_scheme
 
 client = TestClient(app)
 
@@ -20,11 +21,11 @@ def mock_db_config(mock_db):
         status="waiting",
         player_turn=0
     )
+
     mock_player = MagicMock()
     mock_player.id = 1
     mock_player.name = "Test Player"
-    mock_player.game_id = 1
-    
+    mock_player.token = "123456789"
 
     def add_side_effect(game):
         game.status = mock_game.status
@@ -50,13 +51,23 @@ def test_create_game():
     mock_db = MagicMock()
     mock_db_config(mock_db)
 
+    mock_player = Player()
+    mock_player.id = 1
+    mock_player.name = "Test Player"
+    mock_player.token = "123456789"
+
     # Sobrescribir la dependencia de get_db para que use el mock
     app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
+    
+    mock_db.merge.return_value = mock_player
 
     new_game_data = {
         "name": "Test Game",
         "player_amount": 3
     }
+    
     expected_game_out = {
         "id": 1,
         "name": "Test Game",
@@ -66,12 +77,13 @@ def test_create_game():
         "player_turn": 0,
         "players": [
             {
-                "game_id": 1,
                 "id": 1,
                 "name": "Test Player",
             }
         ]
     }
+
+    # with patch("app.endpoints.game_endpoints.auth_scheme.__call__", return_value=mock_player):
     response = client.post("/games", json=new_game_data,
                            params={"player_id": 1})
     assert response.status_code == 200
@@ -152,76 +164,85 @@ def test_wrong_name():
 
 
 def test_join_game():
-    # Create the mock database session
-    mock_db = MagicMock()
+    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
+        mock_manager.broadcast_connection = AsyncMock(return_value=None)
 
-    # Create mock Game and Player objects
-    mock_game = Game(id=1, players=[], player_amount=4, name="Game 1",
-                     status=GameStatus.waiting, host_id=1, player_turn=1)
+        # Create the mock database session
+        mock_db = MagicMock()
 
-    mock_player = Player(id=1, name="Juan", game_id=1)
+        # Create mock Game and Player objects
+        mock_game = Game(id=1, players=[], player_amount=4, name="Game 1",
+                        status=GameStatus.waiting, host_id=1, player_turn=1)
 
-    # Override the get_db dependency with the mock database session
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_player
+        mock_player = Player(id=1, name="Juan")
 
-    # Make the PUT request using the test client
-    response = client.put("/games/1/join", params={"id_player": 1})
+        # Override the get_db dependency with the mock database session
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
+        
+        mock_db.merge.return_value = mock_player
 
-    # Assert that the response was successful
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Jugador unido a la partida",
-        "game": {
-            "id": 1,
-            "name": "Game 1",
-            "status": "waiting",
-            "host_id": 1,
-            "player_turn": 1,
-            "player_amount": 4,
-            # Ensure the player is added to the game's players list
-            "players": [{"id": 1, "name": "Juan", "game_id": 1}],
+        # Make the PUT request using the test client
+        response = client.put(
+            "/games/1/join")
+
+        # Assert that the response was successful
+        assert response.status_code == 200
+        assert response.json() == {
+            "message": "Juan se unido a la partida",
+            "game": {
+                "id": 1,
+                "name": "Game 1",
+                "status": "waiting",
+                "host_id": 1,
+                "player_turn": 1,
+                "player_amount": 4,
+                # Ensure the player is added to the game's players list
+                "players": [{"id": 1, "name": "Juan"}],
+            }
         }
-    }
 
-    # Reset dependency overrides
-    app.dependency_overrides = {}
+        # Reset dependency overrides
+        app.dependency_overrides = {}
 
 
 def test_join_game_full_capacity():
-    # Create the mock database session
-    mock_db = MagicMock()
+    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
+        mock_manager.broadcast_disconnection = AsyncMock(return_value=None)
+    
+        # Create the mock database session
+        mock_db = MagicMock()
 
-    # Create mock list of players to simulate players in a game
-    mock_list_players = [
-        Player(id=1, name="Juan1", game_id=1),
-        Player(id=2, name="Juan2", game_id=1),
-        Player(id=3, name="Juan3", game_id=1),
-    ]
+        # Create mock list of players to simulate players in a game
+        mock_list_players = [
+            Player(id=1, name="Juan1"),
+            Player(id=2, name="Juan2"),
+            Player(id=3, name="Juan3"),
+        ]
 
-    # Create mock Game and Player objects
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1",
-                     status=GameStatus.waiting, host_id=1, player_turn=1)
+        # Create mock Game and Player objects
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1",
+                        status=GameStatus.waiting, host_id=1, player_turn=1)
 
-    mock_player = Player(id=4, name="Juan4", game_id=1)
+        mock_player = Player(id=4, name="Juan4")
 
-    # Override the get_db dependency with the mock database session
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_player
+        # Override the get_db dependency with the mock database session
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-    # Make the PUT request using the test client
-    response = client.put("/games/1/join", params={"id_player": 1})
+        # Make the PUT request using the test client
+        response = client.put("/games/1/join")
 
-    # Assert that the response was successful
-    assert response.status_code == 409
-    assert response.json() == {
-        "detail": "La partida ya cumple con el máximo de jugadores admitidos",
-    }
+        # Assert that the response was successful
+        assert response.status_code == 409
+        assert response.json() == {
+            "detail": "La partida ya cumple con el máximo de jugadores admitidos",
+        }
 
-    # Reset dependency overrides
-    app.dependency_overrides = {}
+        # Reset dependency overrides
+        app.dependency_overrides = {}
 
 
 # ------------------------------------------------- TESTS DE QUIT GAME -----------------------------------------------------------
@@ -232,8 +253,8 @@ def test_quit_game():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, name="gametest", player_amount=4, status="in game",
@@ -244,15 +265,15 @@ def test_quit_game():
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_player
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la petición PUT con el cliente de prueba
-    response = client.put("/games/1/quit", params={"id_player": 1})
+    response = client.put("/games/1/quit")
 
     # Asegurarse de que la respuesta fue exitosa
     assert response.status_code == 200
     assert response.json() == {
-        "message": f"{mock_player.name} abandono la partida",
+        "message": "Juan abandono la partida",
         "game": {
             "id": 1,
             "name": "gametest",
@@ -261,7 +282,7 @@ def test_quit_game():
             "host_id": 2,
             "player_turn": 2,
             # Pedro se queda
-            "players": [{"id": 2, "name": "Pedro", "game_id": 1}],
+            "players": [{"id": 2, "name": "Pedro"}],
         }
     }
 
@@ -275,8 +296,8 @@ def test_quit_game_host_cannot_leave():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, players=mock_list_players,
@@ -287,7 +308,7 @@ def test_quit_game_host_cannot_leave():
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_player
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la petición PUT con el cliente de prueba
     response = client.put("/games/1/quit", params={"id_player": 1})
@@ -308,23 +329,21 @@ def test_quit_game_invalid_player():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, players=mock_list_players,
                      player_amount=4, host_id=2)
 
-    # Simular que el jugador con id 3 no está en la partida
-    invalid_player_id = 3
-
     # Sobrescribir dependencias con mocks
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[auth_scheme] = lambda: None
 
     # Hacer la petición PUT con el cliente de prueba usando un id de jugador que no existe
     response = client.put(
-        "/games/1/quit", params={"id_player": invalid_player_id})
+        "/games/1/quit")
 
     # Asegurarse de que la respuesta es 404 (jugador no encontrado)
     assert response.status_code == 404
@@ -335,7 +354,8 @@ def test_quit_game_invalid_player():
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
 
-# ------------------------------------------------- TESTS DE GET GAME -----------------------------------------------------------   
+# ------------------------------------------------- TESTS DE GET GAME -----------------------------------------------------------
+
 
 def test_get_games_waiting():
     # Crear la sesión de base de datos mock
@@ -343,9 +363,13 @@ def test_get_games_waiting():
 
     # Crear juegos mock con diferentes estados
     mock_games = [
-        Game(id=1, name="Game 1", status="waiting", host_id=1, player_turn=0, player_amount=3),
-        Game(id=2, name="Game 2", status="in_game", host_id=2, player_turn=0, player_amount=4)
+        Game(id=1, name="Game 1", status="waiting",
+             host_id=1, player_turn=0, player_amount=3),
+        Game(id=2, name="Game 2", status="in_game",
+             host_id=2, player_turn=0, player_amount=4)
     ]
+    
+    mock_player = Player(id=1, name="Juan")
 
     # Configurar el mock para que filtre por estado "waiting"
     mock_db.query.return_value.filter.return_value.all.return_value = [
@@ -354,6 +378,7 @@ def test_get_games_waiting():
 
     # Sobrescribir la dependencia de get_db con la sesión mock
     app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la solicitud GET con el filtro "waiting"
     response = client.get("/games", params={"status": "waiting"})
@@ -373,21 +398,27 @@ def test_get_games_waiting():
     # Restaurar las dependencias después de la prueba
     app.dependency_overrides = {}
 
+
 def test_get_all_games():
     # Crear la sesión de base de datos mock
     mock_db = MagicMock()
 
     # Crear juegos mock con diferentes estados
     mock_games = [
-        Game(id=1, name="Game 1", status="waiting", host_id=1, player_turn=0, player_amount=3),
-        Game(id=2, name="Game 2", status="in game", host_id=2, player_turn=1, player_amount=4)
+        Game(id=1, name="Game 1", status="waiting",
+             host_id=1, player_turn=0, player_amount=3),
+        Game(id=2, name="Game 2", status="in game",
+             host_id=2, player_turn=1, player_amount=4)
     ]
+    
+    mock_player = Player(id=1, name="Juan")
 
     # Configurar el mock para que devuelva todas las partidas
     mock_db.query.return_value.all.return_value = mock_games
 
     # Sobrescribir la dependencia de get_db con la sesión mock
     app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la solicitud GET sin filtro
     response = client.get("/games")
@@ -418,15 +449,19 @@ def test_get_all_games():
     # Restaurar las dependencias después de la prueba
     app.dependency_overrides = {}
 
+
 def test_get_games_invalid_status():
     # Crear la sesión de base de datos mock
     mock_db = MagicMock()
 
     # Configurar el mock para que no devuelva ninguna partida
     mock_db.query.return_value.filter.return_value.all.return_value = []
+    
+    mock_player = Player(id=1, name="Juan")
 
     # Sobrescribir la dependencia de get_db con la sesión mock
     app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
 
     # Hacer la solicitud GET con un estado que no existe
     response = client.get("/games", params={"status": "non_existent_status"})
@@ -442,30 +477,33 @@ def test_get_games_invalid_status():
 
  # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
 
+
 def test_start_game():
     mock_db = MagicMock()
-    
+
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1),
-        Player(id=3, name="Maria", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro"),
+        Player(id=3, name="Maria")
     ]
 
     # Mockear shuffle para evitar que cambie el orden
     with patch('random.shuffle', side_effect=lambda x: x):
-        mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
-        
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
+
         mock_db.get_game.return_value = mock_game
         mock_db.get_players.return_value = mock_list_players
         
+        mock_player = Player(id=1, name="Juan")
+
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
-        app.dependency_overrides[get_player] = lambda: mock_list_players
-  
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
+
         response = client.put("games/1/start")
         assert response.status_code == 200
 
-       
         expected_response = {
             "message": "La partida ha comenzado",
             "game": {
@@ -475,34 +513,38 @@ def test_start_game():
                 "host_id": 1,
                 "player_turn": 0,
                 "player_amount": 3,
-                "players": sorted([{"game_id": player.game_id, "id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
+                "players": sorted([{"id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
             }
         }
 
         assert response.json() == expected_response
-        
+
         app.dependency_overrides = {}
+
 
 def test_start_game_incorrect_player_amount():
     mock_db = MagicMock()
-    
+
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
         # Tenemos solo 2 jugadores, pero supongamos que se requieren 3
     ]
 
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
-    
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                     name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
+
     mock_db.get_game.return_value = mock_game
     mock_db.get_players.return_value = mock_list_players
     
+    mock_player = Player(id=1, name="Juan")
+
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[get_player] = lambda: mock_list_players
-  
+    app.dependency_overrides[auth_scheme] = lambda: mock_player
+
     response = client.put("games/1/start")
-    assert response.status_code == 409  
+    assert response.status_code == 409
 
     assert response.json() == {
         "detail": "La partida requiere la cantidad de jugadores especificada para ser iniciada"

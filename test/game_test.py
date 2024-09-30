@@ -23,7 +23,6 @@ def mock_db_config(mock_db):
     mock_player = MagicMock()
     mock_player.id = 1
     mock_player.name = "Test Player"
-    mock_player.game_id = 1
     
 
     def add_side_effect(game):
@@ -66,7 +65,6 @@ def test_create_game():
         "player_turn": 0,
         "players": [
             {
-                "game_id": 1,
                 "id": 1,
                 "name": "Test Player",
             }
@@ -159,7 +157,7 @@ def test_join_game():
     mock_game = Game(id=1, players=[], player_amount=4, name="Game 1",
                      status=GameStatus.waiting, host_id=1, player_turn=1)
 
-    mock_player = Player(id=1, name="Juan", game_id=1)
+    mock_player = Player(id=1, name="Juan")
 
     # Override the get_db dependency with the mock database session
     app.dependency_overrides[get_db] = lambda: mock_db
@@ -172,7 +170,7 @@ def test_join_game():
     # Assert that the response was successful
     assert response.status_code == 200
     assert response.json() == {
-        "message": "Jugador unido a la partida",
+        "message": "Juan se unido a la partida",
         "game": {
             "id": 1,
             "name": "Game 1",
@@ -181,7 +179,7 @@ def test_join_game():
             "player_turn": 1,
             "player_amount": 4,
             # Ensure the player is added to the game's players list
-            "players": [{"id": 1, "name": "Juan", "game_id": 1}],
+            "players": [{"id": 1, "name": "Juan"}],
         }
     }
 
@@ -195,16 +193,16 @@ def test_join_game_full_capacity():
 
     # Create mock list of players to simulate players in a game
     mock_list_players = [
-        Player(id=1, name="Juan1", game_id=1),
-        Player(id=2, name="Juan2", game_id=1),
-        Player(id=3, name="Juan3", game_id=1),
+        Player(id=1, name="Juan1"),
+        Player(id=2, name="Juan2"),
+        Player(id=3, name="Juan3"),
     ]
 
     # Create mock Game and Player objects
     mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1",
                      status=GameStatus.waiting, host_id=1, player_turn=1)
 
-    mock_player = Player(id=4, name="Juan4", game_id=1)
+    mock_player = Player(id=4, name="Juan4")
 
     # Override the get_db dependency with the mock database session
     app.dependency_overrides[get_db] = lambda: mock_db
@@ -232,8 +230,8 @@ def test_quit_game():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, name="gametest", player_amount=4, status="in game",
@@ -261,7 +259,7 @@ def test_quit_game():
             "host_id": 2,
             "player_turn": 2,
             # Pedro se queda
-            "players": [{"id": 2, "name": "Pedro", "game_id": 1}],
+            "players": [{"id": 2, "name": "Pedro"}],
         }
     }
 
@@ -275,8 +273,8 @@ def test_quit_game_host_cannot_leave():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, players=mock_list_players,
@@ -308,8 +306,8 @@ def test_quit_game_invalid_player():
 
     # Crear lista de jugadores y un juego mock
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
     ]
 
     mock_game = Game(id=1, players=mock_list_players,
@@ -446,9 +444,9 @@ def test_start_game():
     mock_db = MagicMock()
     
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1),
-        Player(id=3, name="Maria", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro"),
+        Player(id=3, name="Maria")
     ]
 
     # Mockear shuffle para evitar que cambie el orden
@@ -475,7 +473,7 @@ def test_start_game():
                 "host_id": 1,
                 "player_turn": 0,
                 "player_amount": 3,
-                "players": sorted([{"game_id": player.game_id, "id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
+                "players": sorted([{"id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
             }
         }
 
@@ -487,8 +485,8 @@ def test_start_game_incorrect_player_amount():
     mock_db = MagicMock()
     
     mock_list_players = [
-        Player(id=1, name="Juan", game_id=1),
-        Player(id=2, name="Pedro", game_id=1)
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro")
         # Tenemos solo 2 jugadores, pero supongamos que se requieren 3
     ]
 

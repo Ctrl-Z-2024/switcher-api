@@ -6,10 +6,16 @@ from pydantic import BaseModel
 class PlayerSchemaIn(BaseModel):
     name: str
     
-class PlayerSchemaOut(BaseModel):
+class PlayerSchemaOut(PlayerSchemaIn):
     id: int
-    name: str
     game_id: int | None = None
+    token: str
 
+    class ConfigDict:
+        from_attributes = True
+
+class PlayerGameSchemaOut(PlayerSchemaIn):
+    id: int
+    
     class ConfigDict:
         from_attributes = True

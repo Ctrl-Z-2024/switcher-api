@@ -55,7 +55,7 @@ def join_game(game: Game = Depends(get_game), player: Player = Depends(get_playe
 
     game_out = convert_game_to_schema(game)
 
-    return {"message": "Jugador unido a la partida", "game": game_out}
+    return {"message": f"{player.name} se unido a la partida", "game": game_out}
 
 
 @router.put("/{id_game}/quit")

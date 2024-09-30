@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from app.db.enums import GameStatus
 from typing import List
-from app.schemas.player_schemas import PlayerSchemaOut
+from app.schemas.player_schemas import PlayerGameSchemaOut
 from typing_extensions import Annotated
 from pydantic.functional_validators import AfterValidator
 
@@ -24,7 +24,7 @@ class GameSchemaOut(BaseModel):
     status: GameStatus
     host_id: int
     player_turn: int
-    players: List[PlayerSchemaOut] = []
+    players: List[PlayerGameSchemaOut] = []
 
     class ConfigDict:
         from_attributes = True

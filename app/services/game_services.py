@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
-from app.schemas.player_schemas import PlayerSchemaOut
+from app.schemas.player_schemas import PlayerGameSchemaOut
 import random
 
 
@@ -77,8 +77,8 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
     """return the schema view of Game"""
     game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status,
                              host_id=game.host_id, player_turn=game.player_turn)
-    game_out.players = [PlayerSchemaOut(
-        id=pl.id, name=pl.name, game_id=pl.game_id) for pl in game.players]
+    game_out.players = [PlayerGameSchemaOut(
+        id=pl.id, name=pl.name) for pl in game.players]
     return game_out
 
 def validate_players_amount(game:Game):

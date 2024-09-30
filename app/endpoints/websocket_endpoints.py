@@ -4,13 +4,14 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.models.game_models import Game
-from app.services.websocket_services import GameListManager
+from app.services.websocket_services import GameListManager, GameConnectionsManager
 import asyncio
 import logging
 import threading
 
 router = APIRouter()
 game_list_manager = GameListManager()
+game_connection_manager = GameConnectionsManager()
 
 def start_event_loop(loop):
     asyncio.set_event_loop(loop)
@@ -46,11 +47,21 @@ def handle_change(mapper, connection, target: Game):
     asyncio.run_coroutine_threadsafe(game_list_manager.broadcast_game("game updated", target), loop)
 
 
-@router.websocket("/list")
+@router.websocket("/ws/list")
 async def list(websocket: WebSocket, db: Session = Depends(get_db)):
     await game_list_manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text() 
+    except WebSocketDisconnect:
+        await game_list_manager.disconnect(websocket)
+
+
+@router.websocket("/ws/game/{game_id}")
+async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
+    await game_connection_manager.connect(websocket, game_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
     except WebSocketDisconnect:
         await game_list_manager.disconnect(websocket)

@@ -12,7 +12,7 @@ app = FastAPI(
     title="El Switcher API documentation",
 )
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine) #! TO FIX: This raises the database each time you run a test.
 
 app.include_router(router=game_endpoints.router)
 app.include_router(router=player_endpoints.router)

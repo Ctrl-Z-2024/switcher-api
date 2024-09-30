@@ -8,6 +8,7 @@ from app.models.player_models import Player
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, get_player, check_name, get_game_status
 from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount,shuffle_players 
+from app.endpoints.websocket_endpoints import game_connection_manager
 from typing import List, Optional
 
 # with prefix we don't need to add /games to our endpoints urls
@@ -18,7 +19,7 @@ router = APIRouter(
 
 
 @router.post("/", dependencies=[Depends(check_name)], response_model=GameSchemaOut)
-def create_game(game: GameSchemaIn, player_id: int, db: Session = Depends(get_db)):
+async def create_game(game: GameSchemaIn, player_id: int, db: Session = Depends(get_db)):
     # query to player
     player = db.query(Player).filter(Player.id == player_id).first()
     if not player:
@@ -31,16 +32,19 @@ def create_game(game: GameSchemaIn, player_id: int, db: Session = Depends(get_db
 
     )
     new_game.players.append(player)
+    
 
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
 
+    await game_connection_manager.add_game(new_game.id)
+
     return new_game
 
 
 @router.put("/{id_game}/join", summary="Join a game")
-def join_game(game: Game = Depends(get_game), player: Player = Depends(get_player), db: Session = Depends(get_db)):
+async def join_game(game: Game = Depends(get_game), player: Player = Depends(get_player), db: Session = Depends(get_db)):
     """
     Join a player to an existing game.
 
@@ -51,6 +55,9 @@ def join_game(game: Game = Depends(get_game), player: Player = Depends(get_playe
     """
     validate_game_capacity(game)
 
+    await game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name)
+
+
     add_player_to_game(game, player, db)
 
     game_out = convert_game_to_schema(game)
@@ -59,7 +66,7 @@ def join_game(game: Game = Depends(get_game), player: Player = Depends(get_playe
 
 
 @router.put("/{id_game}/quit")
-def quit_game(id_player: int, game: Game = Depends(get_game), db: Session = Depends(get_db)):
+async def quit_game(id_player: int, game: Game = Depends(get_game), db: Session = Depends(get_db)):
 
     player = search_player_in_game(id_player, game)
 
@@ -69,14 +76,20 @@ def quit_game(id_player: int, game: Game = Depends(get_game), db: Session = Depe
 
     remove_player_from_game(player, game, db)
 
+    await game_connection_manager.broadcast_disconnection(game=game, player_id=player.id, player_name=player.name)
+
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
-@router.put("/{id_game}/start")
-def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), response_model=GameSchemaOut):
+
+@router.put("/{id_game}/start", summary="Start a game")
+async def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db)):
+
+    await game_connection_manager.broadcast_game_start(game=game) 
 
     validate_players_amount(game)
     shuffle_players(game)
     game.status=  GameStatus.in_game
+
 
     board = Board(game.id)
     db.add(board)
@@ -85,6 +98,8 @@ def start_game (game:Game = Depends (get_game), db:Session= Depends(get_db), res
 
     game_out= convert_game_to_schema(game)
     db.commit()
+    
+    
     return {"message": "La partida ha comenzado", "game": game_out}
 
 @router.get("/", response_model=List[GameSchemaOut], summary="Get games filtered by status")

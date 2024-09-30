@@ -27,7 +27,7 @@ Una vez en app, levantamos el servidor con el siguiente comando:
 Y listo!
 
 ## Accediendo a la API
-Una vez que levantemos el servidor, podemos acceder a la API a través de la URL devuelta por uvicorn, por ejemplo `http://127.0.0.1:8000` es la URL por defecto. FastAPI nos brinda una documentación detallada de la API gracias a [Swagger UI](https://github.com/swagger-api/swagger-ui). A esta documentación podemos acceder desde `http://127.0.0.1:8000/docs`.
+Una vez que levantemos el servidor, podemos acceder a la API a través de la URL devuelta por uvicorn, por ejemplo `http://127.0.0.1:8000` es la URL por defecto. FastAPI nos brinda una documentación detallada de la API gracias a [Swagger UI](https://swagger.io/tools/swagger-ui/). A esta documentación podemos acceder desde `http://<direccion>:<puerto>/docs`.
 
 ## Uso de la API
 Para usar la API podemos directamente ir a la documentacion (`/docs`) y ahi mismo comenzar a hacer requests.

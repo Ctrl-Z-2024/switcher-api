@@ -28,8 +28,8 @@ async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials =
         name=game.name,
         player_amount=game.player_amount,
         host_id=player.id,
-
     )
+    
     new_game.players.append(player)
 
     db.add(new_game)

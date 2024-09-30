@@ -30,7 +30,7 @@ class CustomHTTPBearer(HTTPBearer):
             # open db session
             db: Session = next(get_db())
             
-            user = verify_token_in_db(token, db)
+            user = await verify_token_in_db(token, db)
 
             return user
         

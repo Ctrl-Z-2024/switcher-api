@@ -1,4 +1,4 @@
-from fastapi import WebSocket, WebSocketException
+from fastapi import WebSocket, WebSocketException, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from app.schemas.game_schemas import GameSchemaOut
 from app.services.game_services import convert_game_to_schema
@@ -84,7 +84,10 @@ class GameConnectionsManager:
         """
         try:
             for connection in self.active_connections[game_id]:
-                await connection.send_json(jsonable_encoder(event))
+                try: 
+                    await connection.send_json(jsonable_encoder(event))
+                except WebSocketDisconnect:
+                    self.disconnect(connection, game_id)
         except Exception as e:
             raise WebSocketException(code=1011, reason="Internal error")
 
@@ -102,6 +105,14 @@ class GameConnectionsManager:
         event_message = {
             "type": "player connected",
             "message": player_name + " (id: " + str(player_id) + ") has joined the game",
+            "payload": game_schema
+        }
+        await self.broadcast(event=event_message, game_id=game.id)
+        
+    # delete this when we have get game endpoint
+    async def broadcast_initial_game_connection(self, game: Game):
+        game_schema = convert_game_to_schema(game)
+        event_message = {
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)

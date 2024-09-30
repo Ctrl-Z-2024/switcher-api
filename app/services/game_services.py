@@ -4,8 +4,8 @@ from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerGameSchemaOut
+from  app.db.enums import GameStatus
 import random
-
 
 def validate_game_capacity(game: Game):
     """validates if the player can join the game based on the capacity set by the host"""
@@ -18,6 +18,10 @@ def add_player_to_game(game: Game, player: Player, db: Session):
     """impact changes to de database"""
     m_player = db.merge(player)
     game.players.append(m_player)
+    
+    if len(game.players) == game.player_amount:
+        game.status = GameStatus.full
+    
     db.commit()
     db.refresh(game)
 
@@ -28,16 +32,16 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
                              host_id=game.host_id, player_turn=game.player_turn, status=game.status)
 
 
-def search_player_in_game(player: Player, game: Game) -> Player:
+def search_player_in_game(player: Player, game: Game):
     """
     Searchs for a player inside the game.
     Handle exception if the player is not inside the game.
     """
     for pl in game.players:
-        if pl == player:
-            break
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        if pl.id == player.id:
+            return
+        
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail="El jugador no esta en la partida")
 
 
@@ -68,7 +72,14 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
     Deletes a player.
     """
     m_player = db.merge(player)
-    game.players.remove(player)
+
+    m_player.game_id = None
+    
+    if(len(game.players) == game.player_amount):
+        game.status = GameStatus.waiting
+    
+    game.players.remove(m_player)
+    
     update_game_in_db(db, game)
 
 

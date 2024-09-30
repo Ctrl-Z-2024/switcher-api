@@ -1,11 +1,13 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from app.db.enums import MovementType
 from app.models.game_models import Game
+from app.models.movement_card_model import MovementCard
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerSchemaOut
 import random
-
+import logging
 
 
 def validate_game_capacity(game: Game):
@@ -91,4 +93,38 @@ def shuffle_players (game:Game):
     random.shuffle (game.players)
     game.player_turn=0
     
-    
+def create_movement_card(movement_type: MovementType, player_id: int) -> MovementCard:
+    """Crear una nueva carta de movimiento asociada a un jugador."""
+    return MovementCard(movement_type=movement_type, in_hand=True, associated_player=player_id)
+
+def distribute_movement_cards(db: Session, game: Game):
+    """Distribuir cartas de movimiento a los jugadores en el juego."""
+    players = game.players
+
+    # Contador para las cartas creadas por tipo
+    card_count_by_type = {movement_type: 0 for movement_type in MovementType}
+
+    # Asignar cartas a los jugadores
+    for player in players:
+        cards_to_assign = []
+        
+        # Determinar cuántas cartas ya tiene el jugador
+        current_card_count = len(player.movement_cards)
+        cards_needed = min(3 - current_card_count, 3)  # Máximo de 3 cartas por jugador
+
+        for _ in range(cards_needed):  # Asignar hasta 3 cartas a cada jugador
+            random_mov = random.choice(list(MovementType))
+
+            # Comprobar si hay menos de 7 cartas de este tipo creadas
+            if card_count_by_type[random_mov] < 7:
+                new_card = create_movement_card(random_mov, player.id)  # Crear la carta
+                cards_to_assign.append(new_card)
+                card_count_by_type[random_mov] += 1  # Actualizar el conteo de cartas de este tipo
+
+        # Agregar las cartas al jugador
+        player.movement_cards.extend(cards_to_assign)  # Agregar las cartas al jugador
+        # Agregar las nuevas cartas a la base de datos
+        for card in cards_to_assign:
+            logging.info(f"Adding card {card} to player {player.id}")
+            db.add(card)
+        db.commit()

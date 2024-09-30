@@ -10,6 +10,8 @@ class PlayerSchemaOut(BaseModel):
     id: int
     name: str
     game_id: int | None = None
-
+    movement_cards: list[Mo] = []
+    
     class ConfigDict:
         from_attributes = True
+

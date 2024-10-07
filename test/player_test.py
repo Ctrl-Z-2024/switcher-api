@@ -29,7 +29,8 @@ def test_create_player():
     expected_player_out = {
         "name": "test",
         "id": 1,
-        "game_id": None
+        "game_id": None,
+        "movement_cards": []
     }
 
     response = client.post("/players", json=new_player)

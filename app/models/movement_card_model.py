@@ -12,3 +12,4 @@ class MovementCard(Base):
     in_hand = Column(Boolean, default=False)
     associated_player = Column(Integer, ForeignKey("player.id"), nullable=True, default=None)
     player = relationship("Player", back_populates="movement_cards", foreign_keys=[associated_player], primaryjoin="MovementCard.associated_player == Player.id")
+

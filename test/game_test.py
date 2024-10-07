@@ -1,12 +1,10 @@
-import random
 from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
-from app.db.enums import GameStatus
+from app.db.enums import GameStatus, MovementType
 from app.models.game_models import Game
 from app.models.player_models import Player
-from app.models.board_models import Board
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 
@@ -79,6 +77,7 @@ def test_create_game():
             {
                 "id": 1,
                 "name": "Test Player",
+                "movement_cards": []
             }
         ]
     }
@@ -199,7 +198,7 @@ def test_join_game():
                 "player_turn": 1,
                 "player_amount": 4,
                 # Ensure the player is added to the game's players list
-                "players": [{"id": 1, "name": "Juan"}],
+                "players": [{"id": 1, "name": "Juan", "movement_cards": []}],
             }
         }
 
@@ -283,7 +282,7 @@ def test_quit_game():
             "host_id": 2,
             "player_turn": 2,
             # Pedro se queda
-            "players": [{"id": 2, "name": "Pedro"}],
+            "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
         }
     }
 
@@ -397,7 +396,7 @@ def test_get_games_waiting():
         "host_id": 1,
         "player_turn": 0,
         "player_amount": 3,
-        "players": []  # Agrega más detalles si es necesario
+        "players": []
     }]
 
     # Restaurar las dependencias después de la prueba
@@ -480,67 +479,117 @@ def test_get_games_invalid_status():
     # Restaurar las dependencias después de la prueba
     app.dependency_overrides = {}
 
- # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
 
-
+# ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
 def test_start_game():
     mock_db = MagicMock()
 
+    # Crear lista de jugadores
     mock_list_players = [
-        Player(id=1, name="Juan"),
-        Player(id=2, name="Pedro"),
-        Player(id=3, name="Maria")
+        Player(id=1, name="Juan", game_id=1, movement_cards=[]),
+        Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
+        Player(id=3, name="Maria", game_id=1, movement_cards=[])
     ]
 
-    # Mockear shuffle para evitar que cambie el orden
+    # Cartas de movimiento predefinidas para cada jugador
+    mock_movement_choices = [
+        MovementType.CRUCE_LINEAL_CONTIGUO,
+        MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+        MovementType.CRUCE_DIAGONAL_CONTIGUO,
+        MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
+        MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
+        MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+        MovementType.CRUCE_LINEAL_CONTIGUO,
+        MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+        MovementType.CRUCE_DIAGONAL_CONTIGUO
+    ]
+
     with patch('random.randint', return_value=2):
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                         name="Game 1", status=GameStatus.waiting, host_id=1)
-
-        mock_db.get_game.return_value = mock_game
-        mock_db.get_players.return_value = mock_list_players
+                            name="Game 1", status=GameStatus.waiting, host_id=1)
 
         mock_player = Player(id=1, name="Juan")
+        # Mockear random.choice para que siempre devuelva las cartas predefinidas
+        with patch('random.choice', side_effect=lambda x: mock_movement_choices.pop(0)):
+            mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                             name="Game 1", status="waiting", host_id=1, player_turn=0)
 
-        app.dependency_overrides[get_db] = lambda: mock_db
-        app.dependency_overrides[get_game] = lambda: mock_game
-        app.dependency_overrides[auth_scheme] = lambda: mock_player
+            app.dependency_overrides[get_db] = lambda: mock_db
+            app.dependency_overrides[get_game] = lambda: mock_game
+            app.dependency_overrides[auth_scheme] = lambda: mock_player
+            # Llamar a la API para iniciar el juego
+            response = client.put("/games/1/start", params={"id_player": 1})
+            assert response.status_code == 200
 
-        response = client.put("games/1/start")
-        assert response.status_code == 200
+            # Verificar que cada jugador tiene 3 cartas
+            for player in mock_game.players:
+                assert len(player.movement_cards) == 3
 
-        expected_response = {
-            "message": "La partida ha comenzado",
-            "game": {
-                "id": 1,
-                "name": "Game 1",
-                "status": "in game",
-                "host_id": 1,
-                "player_turn": 2,
-                "player_amount": 3,
-                "players": [{"id": player.id, "name": player.name} for player in mock_list_players]
+            # Validar la estructura de la respuesta esperada
+            expected_response = {
+                "message": "La partida ha comenzado",
+                "game": {
+                    "id": 1,
+                    "name": "Game 1",
+                    "player_amount": 3,
+                    "status": "in game",
+                    "host_id": 1,
+                    "player_turn": 2,
+                    "players": [{
+                            "id": 1,
+                            "name": "Juan",
+                            "movement_cards": [
+                                {"movement_type": "cruce en linea contiguo",
+                                 "associated_player": 1, "in_hand": True},
+                                {"movement_type": "cruce en linea con un espacio",
+                                 "associated_player": 1, "in_hand": True},
+                                {"movement_type": "cruce diagonal contiguo",
+                                 "associated_player": 1, "in_hand": True},
+                            ],
+                    },
+                        {
+                        "id": 2,
+                            "name": "Pedro",
+                            "movement_cards": [
+                                {"movement_type": "cruce diagonal con un espacio",
+                                 "associated_player": 2, "in_hand": True},
+                                {"movement_type": "cruce en L hacia la derecha con 2 espacios",
+                                 "associated_player": 2, "in_hand": True},
+                                {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                 "associated_player": 2, "in_hand": True},
+                            ],
+                    },
+                        {
+                        "id": 3,
+                            "name": "Maria",
+                            "movement_cards": [
+                                {"movement_type": "cruce en linea contiguo",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "cruce en linea con un espacio",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "cruce diagonal contiguo",
+                                 "associated_player": 3, "in_hand": True},
+                            ],
+                    },
+                    ],
+                },
             }
-        }
 
-        assert response.json() == expected_response
-
-        app.dependency_overrides = {}
+            assert response.json() == expected_response
+            app.dependency_overrides = {}
 
 
 def test_start_game_incorrect_player_amount():
     mock_db = MagicMock()
 
     mock_list_players = [
-        Player(id=1, name="Juan"),
-        Player(id=2, name="Pedro")
+        Player(id=1, name="Juan", game_id=1),
+        Player(id=2, name="Pedro", game_id=1)
         # Tenemos solo 2 jugadores, pero supongamos que se requieren 3
     ]
 
     mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                      name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
-
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
 
     mock_player = Player(id=1, name="Juan")
 
@@ -571,9 +620,6 @@ def test_finish_turn():
     mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                      name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
 
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
-
     mock_player = Player(id=1, name="Juan")
 
     app.dependency_overrides[get_db] = lambda: mock_db
@@ -591,7 +637,7 @@ def test_finish_turn():
             "host_id": 1,
             "player_turn": 0,
             "player_amount": 3,
-            "players": [{"id": player.id, "name": player.name} for player in mock_list_players]
+            "players": [{"id": player.id, "name": player.name, "movement_cards": []} for player in mock_list_players]
         }
     }
 
@@ -612,9 +658,6 @@ def test_finish_turn_status_full():
 
     mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                      name="Game 1", status=GameStatus.full, host_id=1, player_turn=2)
-
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
 
     mock_player = Player(id=1, name="Juan")
 
@@ -645,41 +688,6 @@ def test_finish_turn_status_waiting():
 
     mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                      name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=2)
-
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
-
-    mock_player = Player(id=1, name="Juan")
-
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[auth_scheme] = lambda: mock_player
-
-    response = client.put("games/1/finish_turn")
-
-    expected_response = {
-        "detail": "El juego debe estar comenzado"
-    }
-
-    assert response.status_code == 400
-    assert response.json() == expected_response
-
-    app.dependency_overrides = {}
-
-def test_finish_turn_status_full():
-    mock_db = MagicMock()
-
-    mock_list_players = [
-        Player(id=1, name="Juan"),
-        Player(id=2, name="Pedro"),
-        Player(id=3, name="Maria")
-    ]
-
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                     name="Game 1", status=GameStatus.full, host_id=1, player_turn=2)
-
-    mock_db.get_game.return_value = mock_game
-    mock_db.get_players.return_value = mock_list_players
 
     mock_player = Player(id=1, name="Juan")
 

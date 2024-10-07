@@ -1,9 +1,13 @@
+import logging
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
 from fastapi import APIRouter, HTTPException, Depends, status, WebSocketException
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.db.enums import GameStatus
 from app.models.game_models import Game
+from app.models.player_models import Player
+from app.dependencies.dependencies import get_game, get_player, check_name, get_game_status
+from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, distribute_movement_cards
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
@@ -13,6 +17,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
 import asyncio
+
 
 # with prefix we don't need to add /games to our endpoints urls
 router = APIRouter(
@@ -89,6 +94,8 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
     random_initial_turn(game)
 
     game.status = GameStatus.in_game
+
+    distribute_movement_cards(db, game)
 
     board = Board(game.id)
     db.add(board)

@@ -1,8 +1,14 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from app.db.enums import MovementType
 from app.models.game_models import Game
+from app.models.movement_card_model import MovementCard
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
+from app.schemas.player_schemas import PlayerGameSchemaOut
+from app.db.enums import GameStatus
+from app.schemas.movement_cards_schema import MovementCardSchema
+import random
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 import random
@@ -94,7 +100,11 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
     game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status,
                              host_id=game.host_id, player_turn=game.player_turn)
     game_out.players = [PlayerGameSchemaOut(
-        id=pl.id, name=pl.name) for pl in game.players]
+        id=pl.id, name=pl.name, movement_cards=[MovementCardSchema(
+            movement_type=mc.movement_type.value,
+            associated_player=mc.associated_player,
+            in_hand=mc.in_hand
+        ) for mc in pl.movement_cards]) for pl in game.players]
     return game_out
 
 
@@ -110,3 +120,24 @@ def random_initial_turn(game: Game):
 
 def assign_next_turn(game: Game):
     game.player_turn = (game.player_turn + 1) % game.player_amount
+
+
+def create_movement_card(movement_type: MovementType, player_id: int) -> MovementCard:
+    """Crear una nueva carta de movimiento asociada a un jugador."""
+    return MovementCard(
+        movement_type=movement_type,
+        associated_player=player_id,
+        in_hand=True
+    )
+
+
+def distribute_movement_cards(db: Session, game: Game):
+    players = game.players
+    # Inicializar la distribución de cartas para cada jugador
+    for player in players:
+        while len(player.movement_cards) < 3:
+            random_mov = random.choice(list(MovementType))
+            new_card = create_movement_card(random_mov, player.id)
+            player.movement_cards.append(new_card)
+            db.add(new_card)
+    db.commit()

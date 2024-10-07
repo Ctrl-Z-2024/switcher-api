@@ -1,5 +1,5 @@
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, HTTPException, Depends, status, WebSocketException
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.db.enums import GameStatus
@@ -11,6 +11,7 @@ from app.endpoints.websocket_endpoints import game_connection_manager
 from fastapi.security import HTTPAuthorizationCredentials
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
+import asyncio
 
 # with prefix we don't need to add /games to our endpoints urls
 router = APIRouter(
@@ -36,7 +37,7 @@ async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials =
     db.commit()
     db.refresh(new_game)
     
-    await game_connection_manager.add_game(new_game.id)
+    asyncio.create_task(game_connection_manager.add_game(new_game.id))
 
     return new_game
 
@@ -54,8 +55,8 @@ async def join_game(game: Game = Depends(get_game), player: HTTPAuthorizationCre
     validate_game_capacity(game)
 
     add_player_to_game(game, player, db)
-
-    await game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name)
+    
+    asyncio.create_task(game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name))
     
     game_out = convert_game_to_schema(game)
 
@@ -73,7 +74,7 @@ async def quit_game(player: HTTPAuthorizationCredentials = Depends(auth_scheme),
 
     remove_player_from_game(player, game, db)
 
-    await game_connection_manager.broadcast_disconnection(game=game, player_id=player.id, player_name=player.name)
+    asyncio.create_task(game_connection_manager.broadcast_disconnection(game=game, player_id=player.id, player_name=player.name))
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
@@ -81,7 +82,7 @@ async def quit_game(player: HTTPAuthorizationCredentials = Depends(auth_scheme),
 @router.put("/{id_game}/start", summary="Start a game", dependencies=[Depends(auth_scheme)])
 async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_db)):
 
-    await game_connection_manager.broadcast_game_start(game=game)
+    asyncio.create_task(game_connection_manager.broadcast_game_start(game=game))    
 
     validate_players_amount(game)
     shuffle_players(game)
@@ -116,8 +117,5 @@ def get_games(
         games = db.query(Game).filter(Game.status == status).all()
     else:
         games = db.query(Game).all()
-
-    # if not games:
-    #     raise HTTPException(status_code=404, detail="No games found")
 
     return games

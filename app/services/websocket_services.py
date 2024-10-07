@@ -1,4 +1,4 @@
-from fastapi import WebSocket, WebSocketException, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketException, WebSocketDisconnect, status
 from fastapi.encoders import jsonable_encoder
 from app.schemas.game_schemas import GameSchemaOut
 from app.services.game_services import convert_game_to_schema
@@ -22,10 +22,15 @@ class GameListManager:
         Remove a connection from the active connections list.
         """
         if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+            try:
+                await websocket.close()
+            except RuntimeError:
+                print("WebSocket disconnected")
+            finally:
+                self.active_connections.remove(websocket)
         else:
             raise WebSocketException(
-                code=3003, reason="You are not connected to the game list.")
+                code=status.WS_1008_POLICY_VIOLATION, reason="You are not connected to the game list.")
 
     async def broadcast_game(self, m_type: str, game: Game, message: str = ""):
         """
@@ -38,7 +43,8 @@ class GameListManager:
             for connection in self.active_connections:
                 await connection.send_json(jsonable_encoder(event))
         except Exception as e:
-            raise WebSocketException(code=1011, reason="Internal error")
+            raise WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
 
 
 class GameConnectionsManager:
@@ -56,40 +62,56 @@ class GameConnectionsManager:
         Add a connection to the active connections list.    
         """
         if game_id not in self.active_connections:
-            raise WebSocketException(code=3003, reason="Game doesn't exist")
+            raise WebSocketException(
+                code=status.WS_1003_UNSUPPORTED_DATA, reason="Game doesn't exist")
 
         if (len(self.active_connections[game_id]) != 4):
             await websocket.accept()
 
             self.active_connections[game_id].append(websocket)
         else:
-            raise WebSocketException(code=3001, reason="Game is full")
+            raise WebSocketException(
+                code=status.WS_1001_GOING_AWAY, reason="Game is full")
 
     async def disconnect(self, websocket: WebSocket, game_id: int):
         """
         Remove a connection from the active connections list.
         """
         if game_id not in self.active_connections:
-            raise WebSocketException(code=3003, reason="Game doesn't exist")
-
-        if websocket not in self.active_connections[game_id]:
             raise WebSocketException(
-                code=3003, reason="You are not connected to that game.")
+                code=status.WS_1003_UNSUPPORTED_DATA, reason="Game doesn't exist")
 
-        self.active_connections[game_id].remove(websocket)
+        if websocket in self.active_connections[game_id]:
+            try:
+                await websocket.close()
+            except RuntimeError:
+                print("WebSocket disconnected")
+            finally:
+                self.active_connections[game_id].remove(websocket)
+        else:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION, reason="You are not connected to that game.")
 
     async def broadcast(self, event: dict, game_id: int):
         """
         Broadcast an event to all active connections.
         """
+        to_remove = []
         try:
             for connection in self.active_connections[game_id]:
-                try: 
+                try:
                     await connection.send_json(jsonable_encoder(event))
                 except WebSocketDisconnect:
-                    self.disconnect(connection, game_id)
+                    to_remove.append(connection)
+                except RuntimeError:
+                    to_remove.append(connection)
+                    
+            for connection in to_remove:
+                await self.disconnect(connection, game_id)
+                
         except Exception as e:
-            raise WebSocketException(code=1011, reason="Internal error")
+            raise WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
 
     async def broadcast_disconnection(self, game: Game, player_id: int, player_name: str):
         game_schema = convert_game_to_schema(game)
@@ -108,7 +130,7 @@ class GameConnectionsManager:
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)
-        
+
     # delete this when we have get game endpoint
     async def broadcast_initial_game_connection(self, game: Game):
         game_schema = convert_game_to_schema(game)

@@ -546,11 +546,11 @@ def test_start_game_incorrect_player_amount():
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
     app.dependency_overrides[auth_scheme] = lambda: mock_player
-
+    
     response = client.put("games/1/start")
     assert response.status_code == 409
 
     assert response.json() == {
         "detail": "La partida requiere la cantidad de jugadores especificada para ser iniciada"
-    }
+    }        
     app.dependency_overrides = {}

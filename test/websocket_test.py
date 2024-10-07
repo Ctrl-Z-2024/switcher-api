@@ -161,7 +161,7 @@ async def test_connect_null_game(mock_websocket, mock_game):
     try:
         await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
     except Exception as e:
-        assert e.code == 3003
+        assert e.code == 1003
         return
     assert False
 
@@ -187,7 +187,7 @@ async def test_disconnect_null_game(mock_websocket, mock_game):
     try:
         await game_connection_manager.disconnect(websocket=mock_websocket, game_id=mock_game.id)
     except Exception as e:
-        assert e.code == 3003
+        assert e.code == 1008
         return
     assert False
     

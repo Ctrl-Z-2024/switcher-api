@@ -6,7 +6,7 @@ from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
-from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, shuffle_players
+from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, random_initial_turn
 from app.endpoints.websocket_endpoints import game_connection_manager
 from fastapi.security import HTTPAuthorizationCredentials
 from app.services.auth_services import CustomHTTPBearer
@@ -85,7 +85,7 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
     asyncio.create_task(game_connection_manager.broadcast_game_start(game=game))    
 
     validate_players_amount(game)
-    shuffle_players(game)
+    random_initial_turn(game)
     game.status = GameStatus.in_game
 
     board = Board(game.id)

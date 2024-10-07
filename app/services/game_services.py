@@ -98,6 +98,5 @@ def validate_players_amount(game: Game):
                             detail="La partida requiere la cantidad de jugadores especificada para ser iniciada")
 
 
-def shuffle_players(game: Game):
-    random.shuffle(game.players)
-    game.player_turn = 0
+def random_initial_turn(game: Game):
+    game.player_turn = random.randint(0, game.player_amount - 1)

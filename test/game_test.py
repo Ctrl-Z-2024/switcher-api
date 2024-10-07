@@ -492,7 +492,7 @@ def test_start_game():
     ]
 
     # Mockear shuffle para evitar que cambie el orden
-    with patch('random.shuffle', side_effect=lambda x: x):
+    with patch('random.randint', return_value=3):
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                          name="Game 1", status=GameStatus.waiting, host_id=1, player_turn=0)
 
@@ -515,9 +515,9 @@ def test_start_game():
                 "name": "Game 1",
                 "status": "in game",
                 "host_id": 1,
-                "player_turn": 0,
+                "player_turn": 3,
                 "player_amount": 3,
-                "players": sorted([{"id": player.id, "name": player.name} for player in mock_list_players], key=lambda x: x["id"])
+                "players": [{"id": player.id, "name": player.name} for player in mock_list_players]
             }
         }
 

@@ -75,7 +75,7 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
 
     m_player.game_id = None
     
-    if(len(game.players) == game.player_amount):
+    if len(game.players) == game.player_amount and not game.status == GameStatus.in_game:
         game.status = GameStatus.waiting
     
     game.players.remove(m_player)

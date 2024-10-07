@@ -19,25 +19,28 @@ def mock_db(mock_player: Player = None):
 
 
 def test_create_player():
-    mock_player = Player(id=1, name="test")
-    mock_db(mock_player)
+    with patch('uuid.uuid4') as mock_uuid:
+        mock_uuid.return_value = "123456789"
+        
+        mock_player = Player(id=1, name="test")
+        mock_db(mock_player)
 
-    new_player = {
-        "name": "test"
-    }
+        new_player = {
+            "name": "test"
+        }
 
-    expected_player_out = {
-        "name": "test",
-        "id": 1,
-        "game_id": None,
-        "movement_cards": []
-    }
+        expected_player_out = {
+            "name": "test",
+            "id": 1,
+            "game_id": None,
+            "token": "123456789"
+        }
 
-    response = client.post("/players", json=new_player)
-    assert response.status_code == 200
-    assert response.json() == expected_player_out
+        response = client.post("/players", json=new_player)
+        assert response.status_code == 200
+        assert response.json() == expected_player_out
 
-    app.dependency_overrides = {}
+        app.dependency_overrides = {}
 
 
 def test_void_name():

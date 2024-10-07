@@ -1,6 +1,7 @@
 from app.models.movement_card_model import MovementCard, MovementType
 from app.models.player_models import Player
 from app.models.game_models import Game
+from app.models.board_models import Board
 from unittest.mock import MagicMock
 
 

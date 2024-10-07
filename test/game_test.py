@@ -278,7 +278,7 @@ def test_quit_game():
         "game": {
             "id": 1,
             "name": "gametest",
-            "player_amount": 3,
+            "player_amount": 4,
             "status": "in game",
             "host_id": 2,
             "player_turn": 2,

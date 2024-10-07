@@ -16,9 +16,11 @@ from app.services.game_services import convert_game_to_schema
 
 client = TestClient(app)
 
+
 @pytest.fixture
 def mock_websocket():
     return MagicMock(spec=WebSocket)
+
 
 @pytest.fixture
 def mock_game():
@@ -31,6 +33,7 @@ def mock_game():
     game.players = []
     game.status = GameStatus.waiting
     return game
+
 
 @pytest.fixture
 def mock_empty_game():
@@ -47,6 +50,7 @@ async def test_connect_game_list(mock_websocket):
     """
     await game_list_manager.connect(mock_websocket)
     assert mock_websocket in game_list_manager.active_connections
+
 
 @pytest.mark.asyncio
 async def test_disconnect_game_list(mock_websocket):
@@ -90,16 +94,18 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
         expected_message_json = jsonable_encoder(expected_message)
 
         response = {}
+
         def capture_response(*args, **kwargs):
             nonlocal response
             response = args[0]
-            
+
         mock_send_json.return_value = None
         mock_send_json.side_effect = capture_response
 
         await game_list_manager.broadcast_game("game added", mock_game)
-        #mock_send_json.assert_called_once()
+        # mock_send_json.assert_called_once()
         assert response == expected_message_json
+
 
 @pytest.mark.asyncio
 async def test_multiple_broadcasting(mock_websocket, mock_game):
@@ -119,7 +125,6 @@ async def test_multiple_broadcasting(mock_websocket, mock_game):
         }
         expected_message_json = jsonable_encoder(expected_message)
 
-        
         mock_send_json.return_value = None
 
         await game_list_manager.broadcast_game("game added", mock_game)
@@ -141,6 +146,7 @@ async def test_connect_game_add_game(mock_game):
     await game_connection_manager.add_game(game_id=mock_game.id)
     assert mock_game.id in game_connection_manager.active_connections
 
+
 @pytest.mark.asyncio
 async def test_connect_created_game(mock_websocket, mock_game):
     """
@@ -148,7 +154,7 @@ async def test_connect_created_game(mock_websocket, mock_game):
     """
 
     await game_connection_manager.add_game(game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
     assert mock_websocket in game_connection_manager.active_connections[mock_game.id]
 
 
@@ -159,9 +165,45 @@ async def test_connect_null_game(mock_websocket, mock_game):
     """
     mock_game.id = 2
     try:
-        await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+        await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
     except Exception as e:
         assert e.code == 1003
+        return
+    assert False
+
+
+@pytest.mark.asyncio
+async def test_connect_game_status_in_game(mock_websocket, mock_game):
+    """
+    Test a websocket that tries to connect to a game which status is in game.
+    """
+    mock_game.id = 1
+    mock_game.status = GameStatus.in_game
+    try:
+        await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+    except Exception as e:
+        assert e.code == 1003
+        return
+    assert False
+
+
+@pytest.mark.asyncio
+async def test_connect_game_full(mock_websocket, mock_game):
+    """
+    Test a websocket that tries to connect to a game that is full.
+    """
+    mock_websocket2 = MagicMock(spec=WebSocket)
+    mock_websocket3 = MagicMock(spec=WebSocket)
+    mock_websocket4 = MagicMock(spec=WebSocket)
+    mock_game.id = 1
+    mock_game.status = GameStatus.full
+    try:
+        await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+        await game_connection_manager.connect(websocket=mock_websocket2, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+        await game_connection_manager.connect(websocket=mock_websocket3, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+        await game_connection_manager.connect(websocket=mock_websocket4, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+    except Exception as e:
+        assert e.code == 1001
         return
     assert False
 
@@ -173,7 +215,7 @@ async def test_disconnect_game(mock_websocket, mock_game):
     """
 
     await game_connection_manager.add_game(game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
     await game_connection_manager.disconnect(websocket=mock_websocket, game_id=mock_game.id)
     assert mock_websocket not in game_connection_manager.active_connections[mock_game.id]
 
@@ -190,7 +232,8 @@ async def test_disconnect_null_game(mock_websocket, mock_game):
         assert e.code == 1008
         return
     assert False
-    
+
+
 @pytest.mark.asyncio
 async def test_broadcast_connection(mock_websocket, mock_game):
     """
@@ -199,8 +242,8 @@ async def test_broadcast_connection(mock_websocket, mock_game):
     mock_websocket2 = MagicMock(spec=WebSocket)
 
     await game_connection_manager.add_game(game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+    await game_connection_manager.connect(websocket=mock_websocket2, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
 
     expected_message = {
         "type": "player connected",
@@ -227,8 +270,8 @@ async def test_broadcast_disconnection(mock_websocket, mock_game):
     mock_websocket2 = MagicMock(spec=WebSocket)
 
     await game_connection_manager.add_game(game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+    await game_connection_manager.connect(websocket=mock_websocket2, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
 
     expected_message = {
         "type": "player disconnected",
@@ -247,15 +290,14 @@ async def test_broadcast_disconnection(mock_websocket, mock_game):
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
 
 
-
 @pytest.mark.asyncio
-async def test_broadcast_start(mock_websocket,mock_game):
+async def test_broadcast_start(mock_websocket, mock_game):
 
     mock_websocket2 = MagicMock(spec=WebSocket)
 
     await game_connection_manager.add_game(game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket ,game_id=mock_game.id)
-    await game_connection_manager.connect(websocket=mock_websocket2 ,game_id=mock_game.id)
+    await game_connection_manager.connect(websocket=mock_websocket, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
+    await game_connection_manager.connect(websocket=mock_websocket2, game_id=mock_game.id, player_amount=mock_game.player_amount, game_status=mock_game.status)
 
     mock_game.status = GameStatus.in_game
 

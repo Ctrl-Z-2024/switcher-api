@@ -1,8 +1,8 @@
 from fastapi import WebSocket, WebSocketException, WebSocketDisconnect, status
 from fastapi.encoders import jsonable_encoder
-from app.schemas.game_schemas import GameSchemaOut
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
+from app.db.enums import GameStatus
 
 
 class GameListManager:
@@ -56,7 +56,7 @@ class GameConnectionsManager:
         """
         self.active_connections[game_id] = []
 
-    async def connect(self, websocket: WebSocket, game_id: int):
+    async def connect(self, websocket: WebSocket, game_id: int, player_amount: int, game_status: GameStatus):
         """
         Add a connection to the active connections list.    
         """
@@ -64,7 +64,12 @@ class GameConnectionsManager:
             raise WebSocketException(
                 code=status.WS_1003_UNSUPPORTED_DATA, reason="Game doesn't exist")
 
-        if (len(self.active_connections[game_id]) != 4):
+        if game_status == GameStatus.in_game:
+            raise WebSocketException(
+                code=status.WS_1003_UNSUPPORTED_DATA, reason="Can't join started game"
+            )
+
+        if len(self.active_connections[game_id]) < player_amount and game_status is not GameStatus.full:
             await websocket.accept()
 
             self.active_connections[game_id].append(websocket)
@@ -104,10 +109,10 @@ class GameConnectionsManager:
                     to_remove.append(connection)
                 except RuntimeError:
                     to_remove.append(connection)
-                    
+
             for connection in to_remove:
                 await self.disconnect(connection, game_id)
-                
+
         except Exception as e:
             raise WebSocketException(
                 code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
@@ -146,7 +151,7 @@ class GameConnectionsManager:
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)
-        
+
     async def broadcast_finish_turn(self, game: Game, player_name: str):
         game_schema = convert_game_to_schema(game)
         event_message = {

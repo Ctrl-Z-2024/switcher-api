@@ -69,9 +69,9 @@ async def list(websocket: WebSocket, db: Session = Depends(get_db)):
 
 @router.websocket("/ws/game/{game_id}")
 async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
-    await game_connection_manager.connect(websocket, game_id)
-    
     game = get_game(game_id, db)
+    
+    await game_connection_manager.connect(websocket, game_id, game.player_amount, game.status)
     
     await game_connection_manager.broadcast_initial_game_connection(game)
     

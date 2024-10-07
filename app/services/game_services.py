@@ -79,11 +79,12 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
     if len(game.players) == game.player_amount and not game.status == GameStatus.in_game:
         game.status = GameStatus.waiting
 
+    if game.status == GameStatus.in_game:
+        # we dont care anymore about this once the game is started
+        # but we need the right player amount to calculate next turn
+        game.player_amount -= 1
+
     game.players.remove(m_player)
-    
-    # we dont care anymore about this once the game is started
-    # but we need the right player amount to calculate next turn
-    game.player_amount -= 1
 
     update_game_in_db(db, game)
 

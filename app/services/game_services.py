@@ -4,8 +4,9 @@ from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerGameSchemaOut
-from  app.db.enums import GameStatus
+from app.db.enums import GameStatus
 import random
+
 
 def validate_game_capacity(game: Game):
     """validates if the player can join the game based on the capacity set by the host"""
@@ -18,10 +19,10 @@ def add_player_to_game(game: Game, player: Player, db: Session):
     """impact changes to de database"""
     m_player = db.merge(player)
     game.players.append(m_player)
-    
+
     if len(game.players) == game.player_amount:
         game.status = GameStatus.full
-    
+
     db.commit()
     db.refresh(game)
 
@@ -40,9 +41,9 @@ def search_player_in_game(player: Player, game: Game):
     for pl in game.players:
         if pl.id == player.id:
             return
-        
+
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="El jugador no esta en la partida")
+                        detail="El jugador no esta en la partida")
 
 
 def is_player_host(player: Player, game: Game) -> bool:
@@ -74,12 +75,16 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
     m_player = db.merge(player)
 
     m_player.game_id = None
-    
+
     if len(game.players) == game.player_amount and not game.status == GameStatus.in_game:
         game.status = GameStatus.waiting
-    
+
     game.players.remove(m_player)
     
+    # we dont care anymore about this once the game is started
+    # but we need the right player amount to calculate next turn
+    game.player_amount -= 1
+
     update_game_in_db(db, game)
 
 
@@ -100,3 +105,7 @@ def validate_players_amount(game: Game):
 
 def random_initial_turn(game: Game):
     game.player_turn = random.randint(0, game.player_amount - 1)
+
+
+def assign_next_turn(game: Game):
+    game.player_turn = (game.player_turn + 1) % game.player_amount

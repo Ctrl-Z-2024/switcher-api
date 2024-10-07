@@ -6,7 +6,8 @@ from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
-from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, random_initial_turn
+from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
+                                        convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, random_initial_turn, update_game_in_db, assign_next_turn)
 from app.endpoints.websocket_endpoints import game_connection_manager
 from fastapi.security import HTTPAuthorizationCredentials
 from app.services.auth_services import CustomHTTPBearer
@@ -29,14 +30,14 @@ async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials =
         player_amount=game.player_amount,
         host_id=player.id,
     )
-    
+
     m_player = db.merge(player)
     new_game.players.append(m_player)
 
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
-    
+
     asyncio.create_task(game_connection_manager.add_game(new_game.id))
 
     return new_game
@@ -55,9 +56,10 @@ async def join_game(game: Game = Depends(get_game), player: HTTPAuthorizationCre
     validate_game_capacity(game)
 
     add_player_to_game(game, player, db)
-    
-    asyncio.create_task(game_connection_manager.broadcast_connection(game=game, player_id=player.id, player_name=player.name))
-    
+
+    asyncio.create_task(game_connection_manager.broadcast_connection(
+        game=game, player_id=player.id, player_name=player.name))
+
     game_out = convert_game_to_schema(game)
 
     return {"message": f"{player.name} se unido a la partida", "game": game_out}
@@ -74,18 +76,18 @@ async def quit_game(player: HTTPAuthorizationCredentials = Depends(auth_scheme),
 
     remove_player_from_game(player, game, db)
 
-    asyncio.create_task(game_connection_manager.broadcast_disconnection(game=game, player_id=player.id, player_name=player.name))
+    asyncio.create_task(game_connection_manager.broadcast_disconnection(
+        game=game, player_id=player.id, player_name=player.name))
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
 
 @router.put("/{id_game}/start", summary="Start a game", dependencies=[Depends(auth_scheme)])
 async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_db)):
-
-    asyncio.create_task(game_connection_manager.broadcast_game_start(game=game))    
-
     validate_players_amount(game)
+
     random_initial_turn(game)
+
     game.status = GameStatus.in_game
 
     board = Board(game.id)
@@ -95,7 +97,34 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     game_out = convert_game_to_schema(game)
 
+    player_name = game.players[game.player_turn].name
+
+    asyncio.create_task(
+        game_connection_manager.broadcast_game_start(game, player_name))
+
     return {"message": "La partida ha comenzado", "game": game_out}
+
+
+@router.put("/{id_game}/finish_turn", summary="Finish a turn", dependencies=[Depends(auth_scheme)])
+async def finish_turn(game: Game = Depends(get_game), db: Session = Depends(get_db)):
+    if game.status is not GameStatus.in_game:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="El juego debe estar comenzado")
+
+    # TODO: deal mov cards to the recent player
+
+    assign_next_turn(game)
+
+    update_game_in_db(db, game)
+
+    game_out = convert_game_to_schema(game)
+
+    player_name = game.players[game.player_turn].name
+
+    asyncio.create_task(
+        game_connection_manager.broadcast_finish_turn(game, player_name))
+
+    return {"message": "Turno finalizado", "game": game_out}
 
 
 @router.get("/", response_model=List[GameSchemaOut], summary="Get games filtered by status", dependencies=[Depends(auth_scheme)])

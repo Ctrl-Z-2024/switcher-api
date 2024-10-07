@@ -13,7 +13,6 @@ class GameListManager:
         """
         Add a connection to the active connections list.    
         """
-
         await websocket.accept()
         self.active_connections.append(websocket)
 
@@ -117,7 +116,7 @@ class GameConnectionsManager:
         game_schema = convert_game_to_schema(game)
         event_message = {
             "type": "player disconnected",
-            "message": player_name + " (id: " + str(player_id) + ") has left the game",
+            "message": player_name + " abandonó la partida",
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)
@@ -126,7 +125,7 @@ class GameConnectionsManager:
         game_schema = convert_game_to_schema(game)
         event_message = {
             "type": "player connected",
-            "message": player_name + " (id: " + str(player_id) + ") has joined the game",
+            "message": player_name + " se ha unido a la partida",
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)
@@ -139,11 +138,20 @@ class GameConnectionsManager:
         }
         await self.broadcast(event=event_message, game_id=game.id)
 
-    async def broadcast_game_start(self, game: Game):
+    async def broadcast_game_start(self, game: Game, player_name: str):
         game_schema = convert_game_to_schema(game)
         event_message = {
             "type": "game started",
-            "message": "",
+            "message": "Turno de " + player_name,
+            "payload": game_schema
+        }
+        await self.broadcast(event=event_message, game_id=game.id)
+        
+    async def broadcast_finish_turn(self, game: Game, player_name: str):
+        game_schema = convert_game_to_schema(game)
+        event_message = {
+            "type": "finish turn",
+            "message": "Turno de " + player_name,
             "payload": game_schema
         }
         await self.broadcast(event=event_message, game_id=game.id)

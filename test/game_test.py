@@ -5,6 +5,7 @@ from app.db.db import get_db
 from app.db.enums import GameStatus, MovementType
 from app.models.game_models import Game
 from app.models.player_models import Player
+from app.models.movement_card_model import MovementCard
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 
@@ -506,7 +507,7 @@ def test_start_game():
 
     with patch('random.randint', return_value=2):
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                            name="Game 1", status=GameStatus.waiting, host_id=1)
+                         name="Game 1", status=GameStatus.waiting, host_id=1)
 
         mock_player = Player(id=1, name="Juan")
         # Mockear random.choice para que siempre devuelva las cartas predefinidas
@@ -605,46 +606,197 @@ def test_start_game_incorrect_player_amount():
     }
     app.dependency_overrides = {}
 
- # ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
+# ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 
 
-def test_finish_turn():
+def test_finish_turn_with_zero_cards():
+    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
+        mock_manager.broadcast_finish_turn = AsyncMock(return_value=None)
+
+        mock_db = MagicMock()
+
+        mock_movement_cards = [
+            MovementCard(id=1, movement_type=MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
+                         associated_player=3, in_hand=False),
+            MovementCard(id=2, movement_type=MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+                         associated_player=3, in_hand=False),
+            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
+                         associated_player=3, in_hand=False),
+        ]
+
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", movement_cards=mock_movement_cards)
+        ]
+
+        # mocked game where it is Maria's turn (index 2)
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+        mock_movement_choices = [
+            MovementType.CRUCE_LINEAL_CONTIGUO,
+            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+            MovementType.CRUCE_DIAGONAL_CONTIGUO,
+        ]
+
+        with patch('random.choice', side_effect=mock_movement_choices):
+            response = client.put("games/1/finish-turn")
+
+            # we expect it's Juan turn (index 0)
+            # we expect Maria to have three movement cards
+            expected_response = {
+                "message": "Turno finalizado",
+                "game": {
+                    "id": 1,
+                    "name": "Game 1",
+                    "status": "in game",
+                    "host_id": 1,
+                    "player_turn": 0,
+                    "player_amount": 3,
+                    "players": [
+                        {
+                            "id": 1,
+                            "name": "Juan",
+                            "movement_cards": [],
+                        },
+                        {
+                            "id": 2,
+                            "name": "Pedro",
+                            "movement_cards": [],
+                        },
+                        {
+                            "id": 3,
+                            "name": "Maria",
+                            "movement_cards": [
+                                {"movement_type": "cruce en linea contiguo",
+                                    "associated_player": 3, "in_hand": True},
+                                {"movement_type": "cruce en linea con un espacio",
+                                    "associated_player": 3, "in_hand": True},
+                                {"movement_type": "cruce diagonal contiguo",
+                                    "associated_player": 3, "in_hand": True},
+                            ],
+                        },
+                    ],
+                }
+            }
+
+            assert response.status_code == 200
+            assert response.json() == expected_response
+
+    app.dependency_overrides = {}
+
+
+def test_finish_turn_with_two_cards():
+    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
+        mock_manager.broadcast_finish_turn = AsyncMock(return_value=None)
+        mock_db = MagicMock()
+
+        mock_movement_cards = [
+            MovementCard(id=1, movement_type=MovementType.CRUCE_LINEAL_CONTIGUO,
+                         associated_player=3, in_hand=True),
+            MovementCard(id=2, movement_type=MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+                         associated_player=3, in_hand=True),
+            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CONTIGUO,
+                         associated_player=3, in_hand=False),
+        ]
+
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", movement_cards=mock_movement_cards)
+        ]
+
+        mock_movement_choices = [
+            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+        ]
+
+        # mocked game where it is Maria's turn (index 2)
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+        with patch('random.choice', side_effect=mock_movement_choices):
+            response = client.put("games/1/finish-turn")
+
+            # we expect it's Juan turn (index 0)
+            # we expect Maria to have three movement cards
+            expected_response = {
+                "message": "Turno finalizado",
+                "game": {
+                    "id": 1,
+                    "name": "Game 1",
+                    "status": "in game",
+                    "host_id": 1,
+                    "player_turn": 0,
+                    "player_amount": 3,
+                    "players": [
+                        {
+                            "id": 1,
+                            "name": "Juan",
+                            "movement_cards": [],
+                        },
+                        {
+                            "id": 2,
+                            "name": "Pedro",
+                            "movement_cards": [],
+                        },
+                        {
+                            "id": 3,
+                            "name": "Maria",
+                            "movement_cards": [
+                                    {"movement_type": "cruce en linea contiguo",
+                                     "associated_player": 3, "in_hand": True},
+                                    {"movement_type": "cruce en linea con un espacio",
+                                     "associated_player": 3, "in_hand": True},
+                                    {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                     "associated_player": 3, "in_hand": True},
+                            ],
+                        },
+                    ],
+                }
+            }
+
+            assert response.status_code == 200
+            assert response.json() == expected_response
+
+    app.dependency_overrides = {}
+
+
+def test_finish_turn_player_not_his_turn():
     mock_db = MagicMock()
 
     mock_list_players = [
         Player(id=1, name="Juan"),
         Player(id=2, name="Pedro"),
-        Player(id=3, name="Maria")
     ]
 
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                     name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+    # Pedro's turn
+    mock_game = Game(id=1, players=mock_list_players, player_amount=2,
+                     name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=1)
 
+    # I'm Juan
     mock_player = Player(id=1, name="Juan")
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_game] = lambda: mock_game
     app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-    response = client.put("games/1/finish_turn")
+    response = client.put("games/1/finish-turn")
 
     expected_response = {
-        "message": "Turno finalizado",
-        "game": {
-            "id": 1,
-            "name": "Game 1",
-            "status": "in game",
-            "host_id": 1,
-            "player_turn": 0,
-            "player_amount": 3,
-            "players": [{"id": player.id, "name": player.name, "movement_cards": []} for player in mock_list_players]
-        }
+        "detail": "Es necesario que sea tu turno para poder finalizarlo"
     }
 
-    assert response.status_code == 200
+    assert response.status_code == 403
     assert response.json() == expected_response
-
-    app.dependency_overrides = {}
 
 
 def test_finish_turn_status_full():
@@ -665,7 +817,7 @@ def test_finish_turn_status_full():
     app.dependency_overrides[get_game] = lambda: mock_game
     app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-    response = client.put("games/1/finish_turn")
+    response = client.put("games/1/finish-turn")
 
     expected_response = {
         "detail": "El juego debe estar comenzado"
@@ -695,7 +847,7 @@ def test_finish_turn_status_waiting():
     app.dependency_overrides[get_game] = lambda: mock_game
     app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-    response = client.put("games/1/finish_turn")
+    response = client.put("games/1/finish-turn")
 
     expected_response = {
         "detail": "El juego debe estar comenzado"

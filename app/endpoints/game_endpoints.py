@@ -1,19 +1,22 @@
-import logging
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
-from fastapi import APIRouter, HTTPException, Depends, status, WebSocketException
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from app.db.enums import GameStatus
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.dependencies.dependencies import get_game, get_player, check_name, get_game_status
-from app.services.game_services import search_player_in_game, is_player_host, remove_player_from_game, convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, distribute_movement_cards
+from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
+                                        convert_game_to_schema, validate_game_capacity, add_player_to_game,
+                                        validate_players_amount, deal_initial_movement_cards,
+                                        deal_movement_cards_to_player)
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
-                                        convert_game_to_schema, validate_game_capacity, add_player_to_game, validate_players_amount, random_initial_turn, update_game_in_db, assign_next_turn)
+                                        convert_game_to_schema, validate_game_capacity, add_player_to_game,
+                                        validate_players_amount, random_initial_turn, update_game_in_db,
+                                        assign_next_turn)
 from app.endpoints.websocket_endpoints import game_connection_manager
-from fastapi.security import HTTPAuthorizationCredentials
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
 import asyncio
@@ -29,7 +32,7 @@ auth_scheme = CustomHTTPBearer()
 
 
 @router.post("/", dependencies=[Depends(check_name)], response_model=GameSchemaOut)
-async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials = Depends(auth_scheme), db: Session = Depends(get_db)):
+async def create_game(game: GameSchemaIn, player: Player = Depends(auth_scheme), db: Session = Depends(get_db)):
     new_game = Game(
         name=game.name,
         player_amount=game.player_amount,
@@ -49,7 +52,7 @@ async def create_game(game: GameSchemaIn, player: HTTPAuthorizationCredentials =
 
 
 @router.put("/{id_game}/join", summary="Join a game")
-async def join_game(game: Game = Depends(get_game), player: HTTPAuthorizationCredentials = Depends(auth_scheme), db: Session = Depends(get_db)):
+async def join_game(game: Game = Depends(get_game), player: Player = Depends(auth_scheme), db: Session = Depends(get_db)):
     """
     Join a player to an existing game.
 
@@ -71,7 +74,7 @@ async def join_game(game: Game = Depends(get_game), player: HTTPAuthorizationCre
 
 
 @router.put("/{id_game}/quit")
-async def quit_game(player: HTTPAuthorizationCredentials = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
+async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
 
     search_player_in_game(player, game)
 
@@ -95,7 +98,7 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     game.status = GameStatus.in_game
 
-    distribute_movement_cards(db, game)
+    deal_initial_movement_cards(db, game)
 
     board = Board(game.id)
     db.add(board)
@@ -112,13 +115,19 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
     return {"message": "La partida ha comenzado", "game": game_out}
 
 
-@router.put("/{id_game}/finish_turn", summary="Finish a turn", dependencies=[Depends(auth_scheme)])
-async def finish_turn(game: Game = Depends(get_game), db: Session = Depends(get_db)):
+@router.put("/{id_game}/finish-turn", summary="Finish a turn")
+async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
     if game.status is not GameStatus.in_game:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="El juego debe estar comenzado")
 
-    # TODO: deal mov cards to the recent player
+    player_turn_obj: Player = game.players[game.player_turn]
+
+    if player.id != player_turn_obj.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Es necesario que sea tu turno para poder finalizarlo")
+
+    deal_movement_cards_to_player(player_turn_obj, db)
 
     assign_next_turn(game)
 
@@ -126,10 +135,8 @@ async def finish_turn(game: Game = Depends(get_game), db: Session = Depends(get_
 
     game_out = convert_game_to_schema(game)
 
-    player_name = game.players[game.player_turn].name
-
     asyncio.create_task(
-        game_connection_manager.broadcast_finish_turn(game, player_name))
+        game_connection_manager.broadcast_finish_turn(game, player_turn_obj.name))
 
     return {"message": "Turno finalizado", "game": game_out}
 

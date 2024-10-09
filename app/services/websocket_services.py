@@ -11,9 +11,7 @@ from typing import List
 def get_game_list() -> List[GameSchemaOut]:
     db = next(get_db())
     games = db.query(Game).filter(Game.status == GameStatus.waiting.value).all()
-    print(games)
     games = list(map(convert_game_to_schema, games))
-    print(games)
     return games
 
 class GameListManager:
@@ -28,7 +26,7 @@ class GameListManager:
         
         event = {"type":"initial game list", "message":"", "payload": jsonable_encoder(games)}
         try:
-            websocket.send_json(event)
+            await websocket.send_json(event)
         except Exception as e:
             raise WebSocketException(code=1011, reason="Internal error")
 

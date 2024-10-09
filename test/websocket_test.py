@@ -46,37 +46,30 @@ async def test_connect_game_list(mock_websocket, mock_game):
     Test to see if the connect method is adding the websocket to the active connections list.
     """
     mock_db = MagicMock()
-    
     mock_db.query.return_value.filter.return_value.all.return_value = [mock_game]
-    mock_db.query.return_value.filter_by.return_value.all.return_value = [mock_game]
-
-
-    def mock_get_db():
-        yield mock_db
-
-    app.dependency_overrides[get_db] = mock_get_db
-    # app.dependency_overrides[convert_game_to_schema] = lambda x: {"id": x.id, "name": x.name}
 
     expected_payload = [convert_game_to_schema(mock_game)]
-    expected_message = {"type": "initial game list", "message": "", "payload": expected_payload}
-    expected_message_json = jsonable_encoder(expected_message)
+    expected_message = {"type": "initial game list", "message": "", "payload": jsonable_encoder(expected_payload)}
 
-    with patch.object(mock_websocket, "send_json") as mock_send_json: 
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch("app.services.websocket_services.get_db", return_value=iter([mock_db])):
         await game_list_manager.connect(mock_websocket)
         assert mock_websocket in game_list_manager.active_connections
         mock_send_json.assert_called_once()
-        assert mock_send_json.call_args_list[0][0][0] == expected_message_json
+        assert mock_send_json.call_args_list[0][0][0] == expected_message
     app.dependency_overrides = {}
+
+
 
 @pytest.mark.asyncio
 async def test_disconnect_game_list(mock_websocket):
     """
     Test to see if the disconnect method is removing the websocket from the active connections list.
     """
-    app.dependency_overrides[game_list_manager.broadcast_game_list] = lambda *args: None
-    await game_list_manager.connect(mock_websocket)
-    await game_list_manager.disconnect(mock_websocket)
-    assert mock_websocket not in game_list_manager.active_connections
+    with patch.object(game_list_manager, "broadcast_game_list") as mock_broadcast_game_list:
+        await game_list_manager.connect(mock_websocket)
+        await game_list_manager.disconnect(mock_websocket)
+        mock_broadcast_game_list.assert_called_once()
+        assert mock_websocket not in game_list_manager.active_connections
     app.dependency_overrides = {}
 
 
@@ -101,9 +94,8 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
     """
     Test to see if the broadcast_game method is sending the correct message to the websocket.
     """
-    app.dependency_overrides[game_list_manager.broadcast_game_list] = lambda *args: None
 
-    with patch.object(mock_websocket, "send_json") as mock_send_json:
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(game_list_manager, "broadcast_game_list") as mock_broadcast_game_list:
         await game_list_manager.connect(mock_websocket)
         mock_game_schema = convert_game_to_schema(mock_game)
         expected_message = {
@@ -122,39 +114,39 @@ async def test_broadcast_correctly(mock_websocket, mock_game):
         mock_send_json.side_effect = capture_response
 
         await game_list_manager.broadcast_game("game added", mock_game)
-        #mock_send_json.assert_called_once()
+        mock_send_json.assert_called_once()
+        mock_broadcast_game_list.assert_called_once()
         assert response == expected_message_json
-    app.dependency_overrides = {}
+
 
 @pytest.mark.asyncio
 async def test_multiple_broadcasting(mock_websocket, mock_game):
     """
     Test to see if the broadcast_game method is sending the correct message to multiple websockets.
     """
-    app.dependency_overrides[game_list_manager.broadcast_game_list] = lambda *args: None
+    with patch.object(game_list_manager, "broadcast_game_list") as mock_broadcast_game_list:
+        mock_websocket2 = MagicMock(spec=WebSocket)
+        with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
+            await game_list_manager.connect(mock_websocket)
+            await game_list_manager.connect(mock_websocket2)
 
-    mock_websocket2 = MagicMock(spec=WebSocket)
-    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
-        await game_list_manager.connect(mock_websocket)
-        await game_list_manager.connect(mock_websocket2)
+            expected_message = {
+                "type": "game added",
+                "message": "",
+                "payload": convert_game_to_schema(mock_game)
+            }
+            expected_message_json = jsonable_encoder(expected_message)
 
-        expected_message = {
-            "type": "game added",
-            "message": "",
-            "payload": convert_game_to_schema(mock_game)
-        }
-        expected_message_json = jsonable_encoder(expected_message)
+            
+            mock_send_json.return_value = None
 
-        
-        mock_send_json.return_value = None
+            await game_list_manager.broadcast_game("game added", mock_game)
 
-        await game_list_manager.broadcast_game("game added", mock_game)
-
-        mock_send_json.assert_called_once()
-        mock_send_json2.assert_called_once()
-        assert mock_send_json.call_args_list[0][0][0] == expected_message_json
-        assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
-    app.dependency_overrides = {}
+            assert mock_broadcast_game_list.call_count == 2
+            mock_send_json.assert_called_once()
+            mock_send_json2.assert_called_once()
+            assert mock_send_json.call_args_list[0][0][0] == expected_message_json
+            assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
 
 
 # === Game Connection's Websocket tests ===

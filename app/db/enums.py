@@ -19,36 +19,32 @@ class MovementType(Enum):
     CRUCE_L_IZQUIERDA_CON_2_ESPACIOS = "cruce en L hacia la izquierda con 2 espacios"
     CRUCE_LINEAL_AL_LATERAL = "cruce en linea al lateral"
 
-class FigureType(Enum):
-    FIG_01 = "difficult figure 01"
-    FIG_02 = "difficult figure 02"
-    FIG_03 = "difficult figure 03"
-    FIG_04 = "difficult figure 04"
-    FIG_05 = "difficult figure 05"
-    FIG_06 = "difficult figure 06"
-    FIG_07 = "difficult figure 07"
-    FIG_08 = "difficult figure 08"
-    FIG_09 = "difficult figure 09"
-    FIG_10 = "difficult figure 10"
-    FIG_11 = "difficult figure 11"
-    FIG_12 = "difficult figure 12"
-    FIG_13 = "difficult figure 13"
-    FIG_14 = "difficult figure 14"
-    FIG_15 = "difficult figure 15"
-    FIG_16 = "difficult figure 16"
-    FIG_17 = "difficult figure 17"
-    FIG_18 = "difficult figure 18"
-    FIGE_01 = "easy figure 01"
-    FIGE_02 = "easy figure 02"
-    FIGE_03 = "easy figure 03"
-    FIGE_04 = "easy figure 04"
-    FIGE_05 = "easy figure 05"
-    FIGE_06 = "easy figure 06"
-    FIGE_07 = "easy figure 07"
-
-class FigureDifficulty(Enum):
-    DIFFICULT = "difficult"
-    EASY = "easy"
+class FigTypeAndDifficulty(Enum):
+    FIG_01 = ("fig01", "difficult")
+    FIG_02 = ("fig02", "difficult")
+    FIG_03 = ("fig03", "difficult")
+    FIG_04 = ("fig04", "difficult")
+    FIG_05 = ("fig05", "difficult")
+    FIG_06 = ("fig06", "difficult")
+    FIG_07 = ("fig07", "difficult")
+    FIG_08 = ("fig08", "difficult")
+    FIG_09 = ("fig09", "difficult")
+    FIG_10 = ("fig10", "difficult")
+    FIG_11 = ("fig11", "difficult")
+    FIG_12 = ("fig12", "difficult")
+    FIG_13 = ("fig13", "difficult")
+    FIG_14 = ("fig14", "difficult")
+    FIG_15 = ("fig15", "difficult")
+    FIG_16 = ("fig16", "difficult")
+    FIG_17 = ("fig17", "difficult")
+    FIG_18 = ("fig18", "difficult")
+    FIGE_01 = ("fige01", "easy")
+    FIGE_02 = ("fige02", "easy")
+    FIGE_03 = ("fige03", "easy")
+    FIGE_04 = ("fige04", "easy")
+    FIGE_05 = ("fige05", "easy")
+    FIGE_06 = ("fige06", "easy")
+    FIGE_07 = ("fige07", "easy")
    
 class Colors(Enum):
     red = "red"

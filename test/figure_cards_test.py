@@ -1,4 +1,4 @@
-from app.models.figure_card_model import FigureCard, FigureType, FigureDifficulty
+from app.models.figure_card_model import FigureCard, FigTypeAndDifficulty
 from app.models.player_models import Player
 from app.models.game_models import Game
 from app.models.board_models import Board
@@ -7,18 +7,16 @@ from unittest.mock import MagicMock
 def test_model_figure_card():
     #Definimos valores predeterminados para una carta figura
     player_id = 1
-    figure_type = FigureType.FIG_01
-    figure_difficulty = FigureDifficulty.DIFFICULT
+    type_difficulty = FigTypeAndDifficulty.FIG_01
     figure_played = False
 
     #Creamos una instancia de carta figura con esos valores
-    figure_card = FigureCard(associated_player=player_id, figure_type=figure_type, 
-                             figure_difficulty=figure_difficulty, played=figure_played)
+    figure_card = FigureCard(associated_player=player_id, type_and_difficulty=type_difficulty, 
+                             played=figure_played)
     
     #Verificamos que los valores se establezcan correctamente
     assert figure_card.associated_player == player_id
-    assert figure_card.figure_type == figure_type
-    assert figure_card.figure_difficulty == figure_difficulty
+    assert figure_card.type_and_difficulty == type_difficulty
     assert not figure_card.played
 
     #Mockeo de la Base de Datos

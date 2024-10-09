@@ -1,9 +1,8 @@
 from pydantic import BaseModel
-from app.db.enums import FigureType, FigureDifficulty
+from app.db.enums import FigTypeAndDifficulty
 
 
 class FigureCardSchema(BaseModel):
-    figure_type: FigureType
-    figure_difficulty: FigureDifficulty
+    type_and_difficulty: FigTypeAndDifficulty
     associated_player: int
     played: bool

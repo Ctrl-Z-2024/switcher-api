@@ -15,13 +15,16 @@ class GameListManager:
         try:
             games = get_game_list()
         except Exception as e:
-            raise WebSocketException(code=1011, reason="Internal error")
-        
-        event = {"type":"initial game list", "message":"", "payload": jsonable_encoder(games)}
+            raise WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
+
+        event = {"type": "initial game list", "message": "",
+                 "payload": jsonable_encoder(games)}
         try:
             await websocket.send_json(event)
         except Exception as e:
-            raise WebSocketException(code=1011, reason="Internal error")
+            raise WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
 
     async def connect(self, websocket: WebSocket):
         """
@@ -32,7 +35,8 @@ class GameListManager:
         try:
             await self.broadcast_game_list(websocket)
         except Exception as e:
-            raise WebSocketException(code=1011, reason="Internal error")
+            raise WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
 
     async def disconnect(self, websocket: WebSocket):
         """
@@ -62,8 +66,6 @@ class GameListManager:
         except Exception as e:
             raise WebSocketException(
                 code=status.WS_1011_INTERNAL_ERROR, reason="Internal error")
-
-
 
 
 class GameConnectionsManager:

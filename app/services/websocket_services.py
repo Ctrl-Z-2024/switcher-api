@@ -3,11 +3,25 @@ from fastapi.encoders import jsonable_encoder
 from app.schemas.game_schemas import GameSchemaOut
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
+from typing import List
+from app.dependencies.dependencies import get_game_list
 
 
 class GameListManager:
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.active_connections: List[WebSocket] = []
+
+    async def broadcast_game_list(self, websocket: WebSocket):
+        try:
+            games = get_game_list()
+        except Exception as e:
+            raise WebSocketException(code=1011, reason="Internal error")
+        
+        event = {"type":"initial game list", "message":"", "payload": jsonable_encoder(games)}
+        try:
+            await websocket.send_json(event)
+        except Exception as e:
+            raise WebSocketException(code=1011, reason="Internal error")
 
     async def connect(self, websocket: WebSocket):
         """
@@ -16,6 +30,10 @@ class GameListManager:
 
         await websocket.accept()
         self.active_connections.append(websocket)
+        try:
+            await self.broadcast_game_list(websocket)
+        except Exception as e:
+            raise WebSocketException(code=1011, reason="Internal error")
 
     async def disconnect(self, websocket: WebSocket):
         """
@@ -39,6 +57,8 @@ class GameListManager:
                 await connection.send_json(jsonable_encoder(event))
         except Exception as e:
             raise WebSocketException(code=1011, reason="Internal error")
+
+
 
 
 class GameConnectionsManager:

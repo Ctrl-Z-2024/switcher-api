@@ -51,7 +51,7 @@ async def test_connect_game_list(mock_websocket, mock_game):
     expected_payload = [convert_game_to_schema(mock_game)]
     expected_message = {"type": "initial game list", "message": "", "payload": jsonable_encoder(expected_payload)}
 
-    with patch.object(mock_websocket, "send_json") as mock_send_json, patch("app.services.websocket_services.get_db", return_value=iter([mock_db])):
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch("app.dependencies.dependencies.get_db", return_value=iter([mock_db])):
         await game_list_manager.connect(mock_websocket)
         assert mock_websocket in game_list_manager.active_connections
         mock_send_json.assert_called_once()

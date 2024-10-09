@@ -3,20 +3,13 @@ from fastapi.encoders import jsonable_encoder
 from app.schemas.game_schemas import GameSchemaOut
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
-from app.db.db import get_db
-from app.db.enums import GameStatus
 from typing import List
+from app.dependencies.dependencies import get_game_list
 
-# TODO: Put this function in a place where it's more appropiate
-def get_game_list() -> List[GameSchemaOut]:
-    db = next(get_db())
-    games = db.query(Game).filter(Game.status == GameStatus.waiting.value).all()
-    games = list(map(convert_game_to_schema, games))
-    return games
 
 class GameListManager:
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.active_connections: List[WebSocket] = []
 
     async def broadcast_game_list(self, websocket: WebSocket):
         try:

@@ -6,6 +6,11 @@ from app.db.db import get_db
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaIn, Annotated
+from app.db.db import get_db
+from app.db.enums import GameStatus
+from typing import List
+from app.schemas.game_schemas import GameSchemaOut
+from app.services.game_services import convert_game_to_schema
 
 
 def check_name(game: Annotated[GameSchemaIn, Body()]):
@@ -44,3 +49,10 @@ def get_game_status(status: Optional[str] = Query(None, description="Filtra jueg
         raise HTTPException(status_code=404, detail="No games found")
     
     return status
+
+
+def get_game_list() -> List[GameSchemaOut]:
+    db = next(get_db())
+    games = db.query(Game).filter(Game.status == GameStatus.waiting.value).all()
+    games = list(map(convert_game_to_schema, games))
+    return games

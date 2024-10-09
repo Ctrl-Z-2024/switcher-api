@@ -69,9 +69,9 @@ async def list(websocket: WebSocket, db: Session = Depends(get_db)):
 
 @router.websocket("/ws/game/{game_id}")
 async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)):
-    await game_connection_manager.connect(websocket, game_id)
-    
     game = get_game(game_id, db)
+    
+    await game_connection_manager.connect(websocket, game_id, game.player_amount, game.status)
     
     await game_connection_manager.broadcast_initial_game_connection(game)
     
@@ -80,10 +80,10 @@ async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)
             data = await websocket.receive_text()
     except WebSocketDisconnect:
         logging.debug(f"{websocket} disconnected. List of remaining websockets: {game_connection_manager.active_connections}")
-        await game_list_manager.disconnect(websocket)
+        await game_connection_manager.disconnect(websocket, game_id)
     except Exception as e:
         logging.error(f"Error in websocket connection: {e}")
-        await game_connection_manager.disconnect(websocket)
+        await game_connection_manager.disconnect(websocket, game_id)
 
 
 

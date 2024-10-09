@@ -5,10 +5,9 @@ from app.models.game_models import Game
 from app.models.movement_card_model import MovementCard
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
+from app.schemas.player_schemas import PlayerGameSchemaOut
+from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
-from app.schemas.player_schemas import PlayerSchemaOut
-import random
-import logging
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 import random
@@ -82,8 +81,13 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
 
     m_player.game_id = None
 
-    if (len(game.players) == game.player_amount):
+    if len(game.players) == game.player_amount and not game.status == GameStatus.in_game:
         game.status = GameStatus.waiting
+
+    if game.status == GameStatus.in_game:
+        # we dont care anymore about this once the game is started
+        # but we need the right player amount to calculate next turn
+        game.player_amount -= 1
 
     game.players.remove(m_player)
 
@@ -109,27 +113,51 @@ def validate_players_amount(game: Game):
                             detail="La partida requiere la cantidad de jugadores especificada para ser iniciada")
 
 
-def shuffle_players(game: Game):
-    random.shuffle(game.players)
-    game.player_turn = 0
+def random_initial_turn(game: Game):
+    game.player_turn = random.randint(0, game.player_amount - 1)
 
 
-def create_movement_card(movement_type: MovementType, player_id: int) -> MovementCard:
+def assign_next_turn(game: Game):
+    game.player_turn = (game.player_turn + 1) % game.player_amount
+
+
+def create_movement_card(player_id: int) -> MovementCard:
     """Crear una nueva carta de movimiento asociada a un jugador."""
+    random_mov = random.choice(list(MovementType))
     return MovementCard(
-        movement_type=movement_type,
+        movement_type=random_mov,
         associated_player=player_id,
         in_hand=True
     )
 
 
-def distribute_movement_cards(db: Session, game: Game):
+def deal_movement_cards(player: Player, db: Session):
+    while len(player.movement_cards) < 3:
+        new_card = create_movement_card(player.id)
+        player.movement_cards.append(new_card)
+        db.add(new_card)
+
+
+def deal_initial_movement_cards(db: Session, game: Game):
     players = game.players
     # Inicializar la distribución de cartas para cada jugador
     for player in players:
-        while len(player.movement_cards) < 3:
-            random_mov = random.choice(list(MovementType))
-            new_card = create_movement_card(random_mov, player.id)
-            player.movement_cards.append(new_card)
-            db.add(new_card)
+        deal_movement_cards(player, db)
     db.commit()
+
+
+def deal_movement_cards_to_player(player: Player, db: Session):
+    new_player_movement_cards = []
+    
+    for card in player.movement_cards:
+        if not card.in_hand:
+            new_card = create_movement_card(player.id)
+            new_player_movement_cards.append(new_card)
+            db.add(new_card)
+        else:
+            new_player_movement_cards.append(card)
+    
+    player.movement_cards = new_player_movement_cards
+    
+    db.commit()
+    db.refresh(player)

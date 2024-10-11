@@ -7,11 +7,12 @@ from fastapi.encoders import jsonable_encoder
 from app.db.enums import GameStatus
 from app.endpoints.websocket_endpoints import handle_creation, handle_change, handle_deletion
 import pytest
-from app.endpoints.websocket_endpoints import game_list_manager, game_connection_manager
+from app.endpoints.websocket_endpoints import game_connection_managers, game_list_manager
 from app.services.game_services import convert_game_to_schema
 
 client = TestClient(app)
 
+#TODO: arreglar los malditos tests
 
 @pytest.fixture
 def mock_websocket():

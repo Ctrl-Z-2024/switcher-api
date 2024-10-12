@@ -81,7 +81,7 @@ def remove_player_from_game(player: Player, game: Game, db: Session):
 
     m_player.game_id = None
 
-    if len(game.players) == game.player_amount and not game.status == GameStatus.in_game:
+    if len(game.players) == game.player_amount and game.status != GameStatus.in_game:
         game.status = GameStatus.waiting
 
     if game.status == GameStatus.in_game:
@@ -161,3 +161,14 @@ def deal_movement_cards_to_player(player: Player, db: Session):
     
     db.commit()
     db.refresh(player)
+
+def victory_conditions(game: Game) -> bool:
+    
+    player_alone = game.status == GameStatus.in_game and game.player_amount == 1
+    
+    if player_alone:
+        game.status = GameStatus.finished
+        return True
+    else: 
+        return False
+

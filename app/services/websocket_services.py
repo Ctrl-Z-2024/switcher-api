@@ -115,3 +115,13 @@ class GameManager:
             "payload": game_schema
         }
         await self.connection_manager.broadcast(event_message)
+    
+    async def broadcast_game_won(self, game: Game, player_name: str):
+        print (game.status)
+        game_schema = convert_game_to_schema(game)
+        event_message = {
+            "type": "game won",
+            "message": player_name + " ha ganado la partida",
+            "payload": game_schema
+        }
+        await self.connection_manager.broadcast(event_message)

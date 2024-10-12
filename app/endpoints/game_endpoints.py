@@ -15,7 +15,7 @@ from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
                                         validate_players_amount, random_initial_turn, update_game_in_db,
-                                        assign_next_turn)
+                                        assign_next_turn, victory_conditions)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
@@ -84,6 +84,9 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     asyncio.create_task(game_connection_managers[game.id].broadcast_disconnection(
         game=game, player_id=player.id, player_name=player.name))
+
+    if victory_conditions(game):
+        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(game, game.players[0].name))
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 

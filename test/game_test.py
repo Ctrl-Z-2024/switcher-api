@@ -164,9 +164,7 @@ def test_wrong_name():
 
 
 def test_join_game():
-    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
-        mock_manager.broadcast_connection = AsyncMock(return_value=None)
-
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         # Create the mock database session
         mock_db = MagicMock()
 
@@ -174,6 +172,8 @@ def test_join_game():
         mock_game = Game(id=1, players=[], player_amount=4, name="Game 1",
                          status=GameStatus.waiting, host_id=1, player_turn=1)
 
+        mock_manager[mock_game.id].broadcast_connection = AsyncMock(return_value=None)
+        
         mock_player = Player(id=1, name="Juan")
 
         # Override the get_db dependency with the mock database session
@@ -208,9 +208,7 @@ def test_join_game():
 
 
 def test_join_game_full_capacity():
-    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
-        mock_manager.broadcast_disconnection = AsyncMock(return_value=None)
-
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         # Create the mock database session
         mock_db = MagicMock()
 
@@ -225,6 +223,8 @@ def test_join_game_full_capacity():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1",
                          status=GameStatus.waiting, host_id=1, player_turn=1)
 
+        mock_manager[mock_game.id].broadcast_connection = AsyncMock(return_value=None)
+        
         mock_player = Player(id=4, name="Juan4")
 
         # Override the get_db dependency with the mock database session
@@ -248,44 +248,47 @@ def test_join_game_full_capacity():
 # ------------------------------------------------- TESTS DE QUIT GAME -----------------------------------------------------------
 
 def test_quit_game():
-    # Crear la sesión de base de datos mock
-    mock_db = MagicMock()
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        # Crear la sesión de base de datos mock
+        mock_db = MagicMock()
 
-    # Crear lista de jugadores y un juego mock
-    mock_list_players = [
-        Player(id=1, name="Juan"),
-        Player(id=2, name="Pedro")
-    ]
+        # Crear lista de jugadores y un juego mock
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro")
+        ]
 
-    mock_game = Game(id=1, name="gametest", player_amount=4, status="in game",
-                     host_id=2, player_turn=2, players=mock_list_players)
+        mock_game = Game(id=1, name="gametest", player_amount=4, status="in game",
+                        host_id=2, player_turn=2, players=mock_list_players)
+        
+        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(return_value=None)
 
-    mock_player = mock_list_players[0]  # Juan quiere abandonar
-    mock_db.merge.return_value = mock_player
+        mock_player = mock_list_players[0]  # Juan quiere abandonar
+        mock_db.merge.return_value = mock_player
 
-    # Sobrescribir dependencias con mocks
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_game] = lambda: mock_game
-    app.dependency_overrides[auth_scheme] = lambda: mock_player
+        # Sobrescribir dependencias con mocks
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-    # Hacer la petición PUT con el cliente de prueba
-    response = client.put("/games/1/quit")
+        # Hacer la petición PUT con el cliente de prueba
+        response = client.put("/games/1/quit")
 
-    # Asegurarse de que la respuesta fue exitosa
-    assert response.status_code == 200
-    assert response.json() == {
-        "message": "Juan abandono la partida",
-        "game": {
-            "id": 1,
-            "name": "gametest",
-            "player_amount": 4,
-            "status": "in game",
-            "host_id": 2,
-            "player_turn": 2,
-            # Pedro se queda
-            "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
+        # Asegurarse de que la respuesta fue exitosa
+        assert response.status_code == 200
+        assert response.json() == {
+            "message": "Juan abandono la partida",
+            "game": {
+                "id": 1,
+                "name": "gametest",
+                "player_amount": 4,
+                "status": "in game",
+                "host_id": 2,
+                "player_turn": 2,
+                # Pedro se queda
+                "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
+            }
         }
-    }
 
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
@@ -483,101 +486,104 @@ def test_get_games_invalid_status():
 
 # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
 def test_start_game():
-    mock_db = MagicMock()
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
 
-    # Crear lista de jugadores
-    mock_list_players = [
-        Player(id=1, name="Juan", game_id=1, movement_cards=[]),
-        Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
-        Player(id=3, name="Maria", game_id=1, movement_cards=[])
-    ]
+        # Crear lista de jugadores
+        mock_list_players = [
+            Player(id=1, name="Juan", game_id=1, movement_cards=[]),
+            Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
+            Player(id=3, name="Maria", game_id=1, movement_cards=[])
+        ]
 
-    # Cartas de movimiento predefinidas para cada jugador
-    mock_movement_choices = [
-        MovementType.CRUCE_LINEAL_CONTIGUO,
-        MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-        MovementType.CRUCE_DIAGONAL_CONTIGUO,
-        MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
-        MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
-        MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
-        MovementType.CRUCE_LINEAL_CONTIGUO,
-        MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-        MovementType.CRUCE_DIAGONAL_CONTIGUO
-    ]
+        # Cartas de movimiento predefinidas para cada jugador
+        mock_movement_choices = [
+            MovementType.CRUCE_LINEAL_CONTIGUO,
+            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+            MovementType.CRUCE_DIAGONAL_CONTIGUO,
+            MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
+            MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
+            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+            MovementType.CRUCE_LINEAL_CONTIGUO,
+            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+            MovementType.CRUCE_DIAGONAL_CONTIGUO
+        ]
 
-    with patch('random.randint', return_value=2):
-        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                         name="Game 1", status=GameStatus.waiting, host_id=1)
-
-        mock_player = Player(id=1, name="Juan")
-        # Mockear random.choice para que siempre devuelva las cartas predefinidas
-        with patch('random.choice', side_effect=lambda x: mock_movement_choices.pop(0)):
+        with patch('random.randint', return_value=2):
             mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                             name="Game 1", status="waiting", host_id=1, player_turn=0)
+                            name="Game 1", status=GameStatus.waiting, host_id=1)
 
-            app.dependency_overrides[get_db] = lambda: mock_db
-            app.dependency_overrides[get_game] = lambda: mock_game
-            app.dependency_overrides[auth_scheme] = lambda: mock_player
-            # Llamar a la API para iniciar el juego
-            response = client.put("/games/1/start", params={"id_player": 1})
-            assert response.status_code == 200
+            mock_manager[mock_game.id].broadcast_game_start = AsyncMock(return_value=None)
+        
+            mock_player = Player(id=1, name="Juan")
+            # Mockear random.choice para que siempre devuelva las cartas predefinidas
+            with patch('random.choice', side_effect=lambda x: mock_movement_choices.pop(0)):
+                mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                                name="Game 1", status="waiting", host_id=1, player_turn=0)
 
-            # Verificar que cada jugador tiene 3 cartas
-            for player in mock_game.players:
-                assert len(player.movement_cards) == 3
+                app.dependency_overrides[get_db] = lambda: mock_db
+                app.dependency_overrides[get_game] = lambda: mock_game
+                app.dependency_overrides[auth_scheme] = lambda: mock_player
+                # Llamar a la API para iniciar el juego
+                response = client.put("/games/1/start", params={"id_player": 1})
+                assert response.status_code == 200
 
-            # Validar la estructura de la respuesta esperada
-            expected_response = {
-                "message": "La partida ha comenzado",
-                "game": {
-                    "id": 1,
-                    "name": "Game 1",
-                    "player_amount": 3,
-                    "status": "in game",
-                    "host_id": 1,
-                    "player_turn": 2,
-                    "players": [{
-                            "id": 1,
-                            "name": "Juan",
-                            "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
-                                 "associated_player": 1, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
-                                 "associated_player": 1, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
-                                 "associated_player": 1, "in_hand": True},
-                            ],
+                # Verificar que cada jugador tiene 3 cartas
+                for player in mock_game.players:
+                    assert len(player.movement_cards) == 3
+
+                # Validar la estructura de la respuesta esperada
+                expected_response = {
+                    "message": "La partida ha comenzado",
+                    "game": {
+                        "id": 1,
+                        "name": "Game 1",
+                        "player_amount": 3,
+                        "status": "in game",
+                        "host_id": 1,
+                        "player_turn": 2,
+                        "players": [{
+                                "id": 1,
+                                "name": "Juan",
+                                "movement_cards": [
+                                    {"movement_type": "cruce en linea contiguo",
+                                    "associated_player": 1, "in_hand": True},
+                                    {"movement_type": "cruce en linea con un espacio",
+                                    "associated_player": 1, "in_hand": True},
+                                    {"movement_type": "cruce diagonal contiguo",
+                                    "associated_player": 1, "in_hand": True},
+                                ],
+                        },
+                            {
+                            "id": 2,
+                                "name": "Pedro",
+                                "movement_cards": [
+                                    {"movement_type": "cruce diagonal con un espacio",
+                                    "associated_player": 2, "in_hand": True},
+                                    {"movement_type": "cruce en L hacia la derecha con 2 espacios",
+                                    "associated_player": 2, "in_hand": True},
+                                    {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                    "associated_player": 2, "in_hand": True},
+                                ],
+                        },
+                            {
+                            "id": 3,
+                                "name": "Maria",
+                                "movement_cards": [
+                                    {"movement_type": "cruce en linea contiguo",
+                                    "associated_player": 3, "in_hand": True},
+                                    {"movement_type": "cruce en linea con un espacio",
+                                    "associated_player": 3, "in_hand": True},
+                                    {"movement_type": "cruce diagonal contiguo",
+                                    "associated_player": 3, "in_hand": True},
+                                ],
+                        },
+                        ],
                     },
-                        {
-                        "id": 2,
-                            "name": "Pedro",
-                            "movement_cards": [
-                                {"movement_type": "cruce diagonal con un espacio",
-                                 "associated_player": 2, "in_hand": True},
-                                {"movement_type": "cruce en L hacia la derecha con 2 espacios",
-                                 "associated_player": 2, "in_hand": True},
-                                {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
-                                 "associated_player": 2, "in_hand": True},
-                            ],
-                    },
-                        {
-                        "id": 3,
-                            "name": "Maria",
-                            "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
-                                 "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
-                                 "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
-                                 "associated_player": 3, "in_hand": True},
-                            ],
-                    },
-                    ],
-                },
-            }
+                }
 
-            assert response.json() == expected_response
-            app.dependency_overrides = {}
+                assert response.json() == expected_response
+    app.dependency_overrides = {}
 
 
 def test_start_game_incorrect_player_amount():
@@ -610,9 +616,7 @@ def test_start_game_incorrect_player_amount():
 
 
 def test_finish_turn_with_zero_cards():
-    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
-        mock_manager.broadcast_finish_turn = AsyncMock(return_value=None)
-
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
 
         mock_movement_cards = [
@@ -633,6 +637,8 @@ def test_finish_turn_with_zero_cards():
         # mocked game where it is Maria's turn (index 2)
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                          name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+        
+        mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -692,8 +698,7 @@ def test_finish_turn_with_zero_cards():
 
 
 def test_finish_turn_with_two_cards():
-    with patch("app.endpoints.game_endpoints.game_connection_manager") as mock_manager:
-        mock_manager.broadcast_finish_turn = AsyncMock(return_value=None)
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
 
         mock_movement_cards = [
@@ -718,6 +723,8 @@ def test_finish_turn_with_two_cards():
         # mocked game where it is Maria's turn (index 2)
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                          name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+        
+        mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game

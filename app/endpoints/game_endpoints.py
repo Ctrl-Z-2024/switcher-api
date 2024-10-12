@@ -16,7 +16,7 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
                                         validate_players_amount, random_initial_turn, update_game_in_db,
                                         assign_next_turn)
-from app.endpoints.websocket_endpoints import game_connection_manager
+from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
 import asyncio
@@ -46,8 +46,6 @@ async def create_game(game: GameSchemaIn, player: Player = Depends(auth_scheme),
     db.commit()
     db.refresh(new_game)
 
-    asyncio.create_task(game_connection_manager.add_game(new_game.id))
-
     return new_game
 
 
@@ -65,7 +63,7 @@ async def join_game(game: Game = Depends(get_game), player: Player = Depends(aut
 
     add_player_to_game(game, player, db)
 
-    asyncio.create_task(game_connection_manager.broadcast_connection(
+    asyncio.create_task(game_connection_managers[game.id].broadcast_connection(
         game=game, player_id=player.id, player_name=player.name))
 
     game_out = convert_game_to_schema(game)
@@ -84,7 +82,7 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     remove_player_from_game(player, game, db)
 
-    asyncio.create_task(game_connection_manager.broadcast_disconnection(
+    asyncio.create_task(game_connection_managers[game.id].broadcast_disconnection(
         game=game, player_id=player.id, player_name=player.name))
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
@@ -110,7 +108,7 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
     player_name = game.players[game.player_turn].name
 
     asyncio.create_task(
-        game_connection_manager.broadcast_game_start(game, player_name))
+        game_connection_managers[game.id].broadcast_game_start(game, player_name))
 
     return {"message": "La partida ha comenzado", "game": game_out}
 
@@ -136,7 +134,7 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     game_out = convert_game_to_schema(game)
 
     asyncio.create_task(
-        game_connection_manager.broadcast_finish_turn(game, player_turn_obj.name))
+        game_connection_managers[game.id].broadcast_finish_turn(game, player_turn_obj.name))
 
     return {"message": "Turno finalizado", "game": game_out}
 

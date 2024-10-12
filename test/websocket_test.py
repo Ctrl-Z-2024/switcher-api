@@ -265,3 +265,24 @@ async def test_broadcast_start(mock_websocket, mock_game):
 
         assert mock_send_json.call_args_list[0][0][0] == expected_message_json
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
+        
+
+@pytest.mark.asyncio
+async def test_websocket_game_reconnection(mock_websocket, mock_game):
+    mock_websocket2 = MagicMock(spec=WebSocket)
+    game_connection_manager = GameManager()
+    await game_connection_manager.connect(websocket=mock_websocket)
+    await game_connection_manager.connect(websocket=mock_websocket2)
+    
+    game_connection_manager.disconnect(mock_websocket)
+
+    with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
+        
+        await game_connection_manager.broadcast_game_start(mock_game, "")
+        
+        await game_connection_manager.connect(websocket=mock_websocket)
+        
+        await game_connection_manager.broadcast_game_start(mock_game, "")
+        
+        mock_send_json.assert_called_once() # called strictly once
+        mock_send_json2.assert_called() # called at least once

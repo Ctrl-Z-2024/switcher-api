@@ -12,13 +12,13 @@ class GameStatus(Enum):
     finished = "finished"
 
 class MovementType(Enum):
-    CRUCE_LINEAL_CONTIGUO = "cruce en linea contiguo"
-    CRUCE_LINEAL_CON_UN_ESPACIO = "cruce en linea con un espacio"
-    CRUCE_DIAGONAL_CONTIGUO = "cruce diagonal contiguo"
-    CRUCE_DIAGONAL_CON_UN_ESPACIO = "cruce diagonal con un espacio"
-    CRUCE_L_DERECHA_CON_2_ESPACIOS = "cruce en L hacia la derecha con 2 espacios"
-    CRUCE_L_IZQUIERDA_CON_2_ESPACIOS = "cruce en L hacia la izquierda con 2 espacios"
-    CRUCE_LINEAL_AL_LATERAL = "cruce en linea al lateral"
+    MOV_01 = "mov01"
+    MOV_02 = "mov02"
+    MOV_03 = "mov03"
+    MOV_04 = "mov04"
+    MOV_05 = "mov05"
+    MOV_06 = "mov06"
+    MOV_07 = "mov07"
 
 class FigTypeAndDifficulty(Enum):
     FIG_01 = ("fig01", "difficult")
@@ -47,6 +47,9 @@ class FigTypeAndDifficulty(Enum):
     FIGE_06 = ("fige06", "easy")
     FIGE_07 = ("fige07", "easy")
    
+AMOUNT_OF_FIGURES_EASY = 7
+AMOUNT_OF_FIGURES_DIFFICULT = 18
+
 class Colors(Enum):
     red = "red"
     blue = "blue"

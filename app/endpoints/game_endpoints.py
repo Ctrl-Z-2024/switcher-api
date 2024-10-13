@@ -15,7 +15,7 @@ from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
                                         validate_players_amount, random_initial_turn, update_game_in_db,
-                                        assign_next_turn, victory_conditions)
+                                        assign_next_turn, victory_conditions, initialize_figure_decks, deal_figure_cards_to_player)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
@@ -101,6 +101,11 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     deal_initial_movement_cards(db, game)
 
+    initialize_figure_decks(game, db)
+
+    for player in game.players:
+        deal_figure_cards_to_player(player, db)
+
     board = Board(game.id)
     db.add(board)
     db.commit()
@@ -132,6 +137,8 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
                             detail="Es necesario que sea tu turno para poder finalizarlo")
 
     deal_movement_cards_to_player(player_turn_obj, db)
+
+    deal_figure_cards_to_player(player_turn_obj, db)
 
     assign_next_turn(game)
 

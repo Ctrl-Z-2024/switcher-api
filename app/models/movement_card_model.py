@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import MovementType
 
-
 class MovementCard(Base):
     __tablename__ = "movement_card"
 

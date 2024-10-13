@@ -2,12 +2,14 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.db import get_db
-from app.db.enums import GameStatus, MovementType
+from app.db.enums import GameStatus, MovementType, FigTypeAndDifficulty
 from app.models.game_models import Game
+from app.models.figure_card_model import FigureCard
 from app.models.player_models import Player
 from app.models.movement_card_model import MovementCard
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
+from app.services.game_services import initialize_figure_decks
 
 client = TestClient(app)
 
@@ -78,7 +80,8 @@ def test_create_game():
             {
                 "id": 1,
                 "name": "Test Player",
-                "movement_cards": []
+                "movement_cards": [],
+                "figure_cards": []
             }
         ]
     }
@@ -198,7 +201,7 @@ def test_join_game():
                 "player_turn": 1,
                 "player_amount": 4,
                 # Ensure the player is added to the game's players list
-                "players": [{"id": 1, "name": "Juan", "movement_cards": []}],
+                "players": [{"id": 1, "name": "Juan", "movement_cards": [], "figure_cards": []}],
             }
         }
 
@@ -273,21 +276,21 @@ def test_quit_game():
         # Hacer la petición PUT con el cliente de prueba
         response = client.put("/games/1/quit")
 
-        # Asegurarse de que la respuesta fue exitosa
-        assert response.status_code == 200
-        assert response.json() == {
-            "message": "Juan abandono la partida",
-            "game": {
-                "id": 1,
-                "name": "gametest",
-                "player_amount": 4,
-                "status": "in game",
-                "host_id": 2,
-                "player_turn": 2,
-                # Pedro se queda
-                "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
-            }
+    # Asegurarse de que la respuesta fue exitosa
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "Juan abandono la partida",
+        "game": {
+            "id": 1,
+            "name": "gametest",
+            "player_amount": 4,
+            "status": "in game",
+            "host_id": 2,
+            "player_turn": 2,
+            # Pedro se queda
+            "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": []}],
         }
+    }
 
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
@@ -484,7 +487,7 @@ def test_get_games_invalid_status():
 
 
 # ------------------------------------------------- TESTS DE START GAME ---------------------------------------------------------
-def test_start_game():
+def test_start_game_movement():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
 
@@ -497,15 +500,15 @@ def test_start_game():
 
         # Cartas de movimiento predefinidas para cada jugador
         mock_movement_choices = [
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO,
-            MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
-            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO
+            MovementType.MOV_01,
+            MovementType.MOV_02,
+            MovementType.MOV_03,
+            MovementType.MOV_04,
+            MovementType.MOV_05,
+            MovementType.MOV_06,
+            MovementType.MOV_07,
+            MovementType.MOV_01,
+            MovementType.MOV_02,
         ]
 
         with patch('random.randint', return_value=2):
@@ -517,7 +520,9 @@ def test_start_game():
         
             mock_player = Player(id=1, name="Juan")
             # Mockear random.choice para que siempre devuelva las cartas predefinidas
-            with patch('random.choice', side_effect=lambda x: mock_movement_choices.pop(0)):
+            with patch('random.choice', side_effect=lambda x: mock_movement_choices.pop(0)), \
+            patch('app.endpoints.game_endpoints.initialize_figure_decks', return_value=None), \
+            patch('app.endpoints.game_endpoints.deal_figure_cards_to_player', return_value=None):
                 mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                                 name="Game 1", status="waiting", host_id=1, player_turn=0)
 
@@ -532,57 +537,60 @@ def test_start_game():
                 for player in mock_game.players:
                     assert len(player.movement_cards) == 3
 
-                # Validar la estructura de la respuesta esperada
-                expected_response = {
-                    "message": "La partida ha comenzado",
-                    "game": {
-                        "id": 1,
-                        "name": "Game 1",
-                        "player_amount": 3,
-                        "status": "in game",
-                        "host_id": 1,
-                        "player_turn": 2,
-                        "players": [{
-                                "id": 1,
-                                "name": "Juan",
-                                "movement_cards": [
-                                    {"movement_type": "cruce en linea contiguo",
-                                    "associated_player": 1, "in_hand": True},
-                                    {"movement_type": "cruce en linea con un espacio",
-                                    "associated_player": 1, "in_hand": True},
-                                    {"movement_type": "cruce diagonal contiguo",
-                                    "associated_player": 1, "in_hand": True},
-                                ],
-                        },
-                            {
-                            "id": 2,
-                                "name": "Pedro",
-                                "movement_cards": [
-                                    {"movement_type": "cruce diagonal con un espacio",
-                                    "associated_player": 2, "in_hand": True},
-                                    {"movement_type": "cruce en L hacia la derecha con 2 espacios",
-                                    "associated_player": 2, "in_hand": True},
-                                    {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
-                                    "associated_player": 2, "in_hand": True},
-                                ],
-                        },
-                            {
-                            "id": 3,
-                                "name": "Maria",
-                                "movement_cards": [
-                                    {"movement_type": "cruce en linea contiguo",
-                                    "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce en linea con un espacio",
-                                    "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce diagonal contiguo",
-                                    "associated_player": 3, "in_hand": True},
-                                ],
-                        },
-                        ],
+            # Validar la estructura de la respuesta esperada
+            expected_response = {
+                "message": "La partida ha comenzado",
+                "game": {
+                    "id": 1,
+                    "name": "Game 1",
+                    "player_amount": 3,
+                    "status": "in game",
+                    "host_id": 1,
+                    "player_turn": 2,
+                    "players": [{
+                            "id": 1,
+                            "name": "Juan",
+                            "movement_cards": [
+                                {"movement_type": "mov01",
+                                 "associated_player": 1, "in_hand": True},
+                                {"movement_type": "mov02",
+                                 "associated_player": 1, "in_hand": True},
+                                {"movement_type": "mov03",
+                                 "associated_player": 1, "in_hand": True},
+                            ],
+                            "figure_cards": []
                     },
-                }
+                        {
+                        "id": 2,
+                            "name": "Pedro",
+                            "movement_cards": [
+                                {"movement_type": "mov04",
+                                 "associated_player": 2, "in_hand": True},
+                                {"movement_type": "mov05",
+                                 "associated_player": 2, "in_hand": True},
+                                {"movement_type": "mov06",
+                                 "associated_player": 2, "in_hand": True},
+                            ],
+                            "figure_cards": []
+                    },
+                        {
+                        "id": 3,
+                            "name": "Maria",
+                            "movement_cards": [
+                                {"movement_type": "mov07",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "mov01",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "mov02",
+                                 "associated_player": 3, "in_hand": True},
+                            ],
+                            "figure_cards": []
+                    },
+                    ],
+                },
+            }
 
-                assert response.json() == expected_response
+            assert response.json() == expected_response
     app.dependency_overrides = {}
 
 
@@ -612,6 +620,139 @@ def test_start_game_incorrect_player_amount():
     }
     app.dependency_overrides = {}
 
+
+# ------------------------------------------------- TESTS DE CARTAS DE FIGURA ----------------------------------------------------
+
+
+def test_start_game_figure_deal():
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+
+        # Crear lista de jugadores
+        mock_list_players = [
+            Player(id=1, name="Juan", game_id=1, movement_cards=[]),
+            Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
+            Player(id=3, name="Maria", game_id=1, movement_cards=[])
+        ]
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                            name="Game 1", status=GameStatus.waiting, host_id=1)
+
+        mock_player = Player(id=1, name="Juan")
+    
+        def mock_deck_per_player(game: Game, db: MagicMock):
+            for player in mock_game.players:
+                player.figure_cards = [
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_02, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_03, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_04, associated_player=player.id, in_hand=False),
+                ]
+
+        # We are not testing the dealing of movement cards in this test, nor the initialization of the deck itself.
+        with patch('app.endpoints.game_endpoints.deal_initial_movement_cards', return_value=None), \
+            patch('random.choice', side_effect=lambda x: x.pop(0)), \
+            patch('app.endpoints.game_endpoints.initialize_figure_decks', side_effect= mock_deck_per_player), \
+            patch('random.randint', return_value=2):
+            
+            mock_manager[mock_game.id].broadcast_game_start = AsyncMock(return_value=None)
+            mock_manager[mock_game.id].broadcast_board = AsyncMock(return_value=None)
+            
+            app.dependency_overrides[get_db] = lambda: mock_db
+            app.dependency_overrides[get_game] = lambda: mock_game
+            app.dependency_overrides[auth_scheme] = lambda: mock_player
+
+            response = client.put("games/1/start")
+            assert response.status_code == 200
+
+            expected_response = {
+                    "message": "La partida ha comenzado",
+                    "game": {
+                        "id": 1,
+                        "name": "Game 1",
+                        "player_amount": 3,
+                        "status": "in game",
+                        "host_id": 1,
+                        "player_turn": 2,
+                        "players": [{
+                                "id": 1,
+                                "name": "Juan",
+                                "movement_cards": [],
+
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 1},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 1},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 1},
+                                ]
+                        },
+                            {
+                            "id": 2,
+                                "name": "Pedro",
+                                "movement_cards": [],
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 2},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 2},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 2},
+                                ]
+                        },
+                            {
+                            "id": 3,
+                                "name": "Maria",
+                                "movement_cards": [],
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 3},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 3},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 3},
+                                ]
+                        },
+                        ],
+                    },
+                }
+            
+        assert response.json() == expected_response
+    app.dependency_overrides = {}
+        
+
+def test_initialization_deck():
+    deck_list = []
+    
+    mock_db = MagicMock()
+    mock_db.add.side_effect = lambda x: deck_list.append(x)
+
+    # Crear lista de jugadores
+    mock_list_players = [
+        Player(id=1, name="Juan", game_id=1, movement_cards=[]),
+        Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
+        Player(id=3, name="Maria", game_id=1, movement_cards=[])
+    ]
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.waiting, host_id=1)
+    
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+
+    initialize_figure_decks(mock_game, mock_db)
+
+    #with patch('random.choice', side_effect=lambda x: x.pop(0)):
+    #    initialize_figure_decks(mock_game, mock_db)
+    
+    # 7*2//3 = 4
+    # 18*2//3 = 12
+    assert len(deck_list) == 4 * 3 + 12 * 3
+
+    # 4 easy cards per player, 12 difficult cards per player
+    for player in mock_game.players:
+        assert len(list(filter(lambda x: x.associated_player == player.id and x.type_and_difficulty.value[1] == "easy", deck_list))) == 4
+        assert len(list(filter(lambda x: x.associated_player == player.id and x.type_and_difficulty.value[1] == "difficult", deck_list))) == 12
+    
+    repeated_cards = list(filter(lambda x: deck_list.count(x) > 2, deck_list))
+    assert repeated_cards == []
+
+    invalid_cards = list(filter(lambda x: x.type_and_difficulty.value not in [type.value for type in FigTypeAndDifficulty], deck_list))
+    assert invalid_cards == []
+
+    app.dependency_overrides = {}
+
+
 # ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 
 
@@ -620,11 +761,11 @@ def test_finish_turn_with_zero_cards():
         mock_db = MagicMock()
 
         mock_movement_cards = [
-            MovementCard(id=1, movement_type=MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
+            MovementCard(id=1, movement_type=MovementType.MOV_04,
                          associated_player=3, in_hand=False),
-            MovementCard(id=2, movement_type=MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+            MovementCard(id=2, movement_type=MovementType.MOV_05,
                          associated_player=3, in_hand=False),
-            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
+            MovementCard(id=3, movement_type=MovementType.MOV_06,
                          associated_player=3, in_hand=False),
         ]
 
@@ -645,9 +786,9 @@ def test_finish_turn_with_zero_cards():
         app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
 
         mock_movement_choices = [
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO,
+            MovementType.MOV_01,
+            MovementType.MOV_02,
+            MovementType.MOV_03,
         ]
 
         with patch('random.choice', side_effect=mock_movement_choices):
@@ -669,23 +810,26 @@ def test_finish_turn_with_zero_cards():
                             "id": 1,
                             "name": "Juan",
                             "movement_cards": [],
+                            "figure_cards": []
                         },
                         {
                             "id": 2,
                             "name": "Pedro",
                             "movement_cards": [],
+                            "figure_cards": []
                         },
                         {
                             "id": 3,
                             "name": "Maria",
                             "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
+                                {"movement_type": "mov01",
                                     "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
+                                {"movement_type": "mov02",
                                     "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
+                                {"movement_type": "mov03",
                                     "associated_player": 3, "in_hand": True},
                             ],
+                            "figure_cards": []
                         },
                     ],
                 }
@@ -702,11 +846,11 @@ def test_finish_turn_with_two_cards():
         mock_db = MagicMock()
 
         mock_movement_cards = [
-            MovementCard(id=1, movement_type=MovementType.CRUCE_LINEAL_CONTIGUO,
+            MovementCard(id=1, movement_type=MovementType.MOV_01,
                          associated_player=3, in_hand=True),
-            MovementCard(id=2, movement_type=MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+            MovementCard(id=2, movement_type=MovementType.MOV_02,
                          associated_player=3, in_hand=True),
-            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CONTIGUO,
+            MovementCard(id=3, movement_type=MovementType.MOV_03,
                          associated_player=3, in_hand=False),
         ]
 
@@ -717,7 +861,7 @@ def test_finish_turn_with_two_cards():
         ]
 
         mock_movement_choices = [
-            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+            MovementType.MOV_04,
         ]
 
         # mocked game where it is Maria's turn (index 2)
@@ -749,23 +893,26 @@ def test_finish_turn_with_two_cards():
                             "id": 1,
                             "name": "Juan",
                             "movement_cards": [],
+                            "figure_cards": []
                         },
                         {
                             "id": 2,
                             "name": "Pedro",
                             "movement_cards": [],
+                            "figure_cards": []
                         },
                         {
                             "id": 3,
                             "name": "Maria",
                             "movement_cards": [
-                                    {"movement_type": "cruce en linea contiguo",
+                                    {"movement_type": "mov01",
                                      "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce en linea con un espacio",
+                                    {"movement_type": "mov02",
                                      "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                    {"movement_type": "mov04",
                                      "associated_player": 3, "in_hand": True},
                             ],
+                            "figure_cards": []
                         },
                     ],
                 }

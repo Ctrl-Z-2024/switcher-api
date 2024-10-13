@@ -8,16 +8,16 @@ def test_model_figure_card():
     #Definimos valores predeterminados para una carta figura
     player_id = 1
     type_difficulty = FigTypeAndDifficulty.FIG_01
-    figure_played = False
+    figure_in_hand = False
 
     #Creamos una instancia de carta figura con esos valores
     figure_card = FigureCard(associated_player=player_id, type_and_difficulty=type_difficulty, 
-                             played=figure_played)
+                             in_hand=figure_in_hand)
     
     #Verificamos que los valores se establezcan correctamente
     assert figure_card.associated_player == player_id
     assert figure_card.type_and_difficulty == type_difficulty
-    assert not figure_card.played
+    assert not figure_card.in_hand
 
     #Mockeo de la Base de Datos
     mock_db = MagicMock()

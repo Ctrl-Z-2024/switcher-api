@@ -112,6 +112,9 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game_start(game, player_name))
+    
+    asyncio.create_task( 
+        game_connection_managers[game.id].broadcast_board(game))
 
     return {"message": "La partida ha comenzado", "game": game_out}
 

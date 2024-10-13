@@ -13,6 +13,9 @@ import pytest
 from app.endpoints.websocket_endpoints import game_list_manager
 from app.services.game_services import convert_game_to_schema
 from app.services.websocket_services import GameManager
+from app.models.board_models import Board
+from app.db.enums import Colors
+
 
 client = TestClient(app)
 
@@ -268,7 +271,6 @@ async def test_broadcast_start(mock_websocket, mock_game):
 
         assert mock_send_json.call_args_list[0][0][0] == expected_message_json
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
-        
 
 @pytest.mark.asyncio
 async def test_websocket_game_reconnection(mock_websocket, mock_game):
@@ -392,3 +394,25 @@ def test_no_victory_when_multiple_players_remain():
 
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
+
+
+
+@pytest.mark.asyncio
+async def test_broadcast_board(mock_websocket, mock_game):
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, patch("random.shuffle", side_effect = lambda x: x):
+        game_connection_manager = GameManager()
+        mock_board = MagicMock(spec=Board)
+        mock_board.color_distribution = []
+        for _ in range(6):
+            mock_board.color_distribution.append([Colors.red.value, Colors.blue.value, Colors.yellow.value,
+                                                  Colors.green.value, Colors.red.value, Colors.blue.value])
+        mock_game.board = mock_board
+
+    with patch.object(mock_websocket, "send_json") as mock_send_json:
+        await game_connection_manager.connect(websocket=mock_websocket)
+        await game_connection_manager.broadcast_board(mock_game)
+
+        mock_send_json.assert_called_once()
+        assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
+        assert mock_send_json.call_args_list[0][0][0]["message"] == ""
+        assert mock_send_json.call_args_list[0][0][0]["payload"]["color_distribution"] == mock_board.color_distribution

@@ -163,7 +163,6 @@ def deal_movement_cards_to_player(player: Player, db: Session):
     db.refresh(player)
 
 def victory_conditions(game: Game) -> bool:
-    
     player_alone = game.status == GameStatus.in_game and game.player_amount == 1
     
     if player_alone:

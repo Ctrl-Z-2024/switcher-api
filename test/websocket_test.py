@@ -1,7 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
-from app.models.game_models import Game
+from app.models.game_models import Game, Player
 from app.main import app
+from app.db.db import get_db
+from app.dependencies.dependencies import get_game
+from app.endpoints.game_endpoints import auth_scheme
 from fastapi import WebSocket
 from fastapi.encoders import jsonable_encoder
 from app.db.enums import GameStatus
@@ -286,3 +289,106 @@ async def test_websocket_game_reconnection(mock_websocket, mock_game):
         
         mock_send_json.assert_called_once() # called strictly once
         mock_send_json2.assert_called() # called at least once
+
+
+# ------------------------------------------------- TESTS DE VICTORY CONDITIONS ---------------------------------------------------------
+def test_victory_when_player_is_alone():
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        # Crear la sesión de base de datos mock
+        mock_db = MagicMock()
+
+        # Crear lista de jugadores y un juego mock
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro")
+        ]
+
+        mock_game = Game(id=1, name="gametest", player_amount=2, status=GameStatus.in_game,
+                         host_id=2, player_turn=1, players=mock_list_players)
+        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(return_value=None)
+        mock_manager[mock_game.id].broadcast_game_won = AsyncMock(return_value=None)
+
+        mock_player = mock_list_players[0]  # Juan quiere abandonar
+        mock_db.merge.return_value = mock_player
+
+        # Sobrescribir dependencias con mocks
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
+
+        # Hacer la petición PUT con el cliente de prueba
+        response = client.put("/games/1/quit")
+        # Asegurarse de que la respuesta fue exitosa
+        assert response.status_code == 200
+        assert response.json() == {
+            "message": "Juan abandono la partida",
+            "game": {
+                "id": 1,
+                "name": "gametest",
+                "player_amount": 1,
+                "status": "finished",  # El estado debe ser 'finished' cuando alguien gana
+                "host_id": 2,
+                "player_turn": 1,
+                # Solo Pedro queda en el juego, y ha ganado
+                "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
+            }
+        }
+
+        # Verificar que se haya llamado a la función broadcast_game_won
+        mock_manager[mock_game.id].broadcast_game_won.assert_called_once_with(mock_game, "Pedro")
+
+    # Restablecer dependencias sobrescritas
+    app.dependency_overrides = {}
+
+def test_no_victory_when_multiple_players_remain():
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        # Crear la sesión de base de datos mock
+        mock_db = MagicMock()
+
+        # Crear lista de jugadores y un juego mock
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria")
+        ]
+
+        mock_game = Game(id=1, name="gametest", player_amount=3, status=GameStatus.in_game,
+                         host_id=2, player_turn=1, players=mock_list_players)
+        
+        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(return_value=None)
+
+        mock_player = mock_list_players[0]  # Juan quiere abandonar
+        mock_db.merge.return_value = mock_player
+
+        # Sobrescribir dependencias con mocks
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player
+
+        # Hacer la petición PUT con el cliente de prueba
+        response = client.put("/games/1/quit")
+
+        # Asegurarse de que la respuesta fue exitosa
+        assert response.status_code == 200
+        assert response.json() == {
+            "message": "Juan abandono la partida",
+            "game": {
+                "id": 1,
+                "name": "gametest",
+                "player_amount": 2,
+                "status": "in game",  # El estado sigue siendo 'in game'
+                "host_id": 2,
+                "player_turn": 1,
+                # Pedro y Maria quedan en el juego
+                "players": [
+                    {"id": 2, "name": "Pedro", "movement_cards": []},
+                    {"id": 3, "name": "Maria", "movement_cards": []}
+                ],
+            }
+        }
+
+        # Verificar que no se haya llamado a la función broadcast_game_won
+        mock_manager[mock_game.id].broadcast_game_won.assert_not_called()
+
+    # Restablecer dependencias sobrescritas
+    app.dependency_overrides = {}

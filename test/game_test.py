@@ -625,85 +625,88 @@ def test_start_game_incorrect_player_amount():
 
 
 def test_start_game_figure_deal():
-    mock_db = MagicMock()
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
 
-    # Crear lista de jugadores
-    mock_list_players = [
-        Player(id=1, name="Juan", game_id=1, movement_cards=[]),
-        Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
-        Player(id=3, name="Maria", game_id=1, movement_cards=[])
-    ]
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                         name="Game 1", status=GameStatus.waiting, host_id=1)
+        # Crear lista de jugadores
+        mock_list_players = [
+            Player(id=1, name="Juan", game_id=1, movement_cards=[]),
+            Player(id=2, name="Pedro", game_id=1, movement_cards=[]),
+            Player(id=3, name="Maria", game_id=1, movement_cards=[])
+        ]
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                            name="Game 1", status=GameStatus.waiting, host_id=1)
 
-    mock_player = Player(id=1, name="Juan")
-   
-    def mock_deck_per_player(game: Game, db: MagicMock):
-        for player in mock_game.players:
-            player.figure_cards = [
-                FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=player.id, in_hand=False),
-                FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_02, associated_player=player.id, in_hand=False),
-                FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_03, associated_player=player.id, in_hand=False),
-                FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_04, associated_player=player.id, in_hand=False),
-            ]
+        mock_player = Player(id=1, name="Juan")
+    
+        def mock_deck_per_player(game: Game, db: MagicMock):
+            for player in mock_game.players:
+                player.figure_cards = [
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_02, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_03, associated_player=player.id, in_hand=False),
+                    FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_04, associated_player=player.id, in_hand=False),
+                ]
 
-    # We are not testing the dealing of movement cards in this test, nor the initialization of the deck itself.
-    with patch('app.endpoints.game_endpoints.deal_initial_movement_cards', return_value=None), \
-        patch('random.choice', side_effect=lambda x: x.pop(0)), \
-        patch('app.endpoints.game_endpoints.initialize_figure_decks', side_effect= mock_deck_per_player), \
-        patch('random.randint', return_value=2):
-        
-        app.dependency_overrides[get_db] = lambda: mock_db
-        app.dependency_overrides[get_game] = lambda: mock_game
-        app.dependency_overrides[auth_scheme] = lambda: mock_player
+        # We are not testing the dealing of movement cards in this test, nor the initialization of the deck itself.
+        with patch('app.endpoints.game_endpoints.deal_initial_movement_cards', return_value=None), \
+            patch('random.choice', side_effect=lambda x: x.pop(0)), \
+            patch('app.endpoints.game_endpoints.initialize_figure_decks', side_effect= mock_deck_per_player), \
+            patch('random.randint', return_value=2):
+            
+            mock_manager[mock_game.id].broadcast_game_start = AsyncMock(return_value=None)
+            
+            app.dependency_overrides[get_db] = lambda: mock_db
+            app.dependency_overrides[get_game] = lambda: mock_game
+            app.dependency_overrides[auth_scheme] = lambda: mock_player
 
-        response = client.put("games/1/start")
-        assert response.status_code == 200
+            response = client.put("games/1/start")
+            assert response.status_code == 200
 
-        expected_response = {
-                "message": "La partida ha comenzado",
-                "game": {
-                    "id": 1,
-                    "name": "Game 1",
-                    "player_amount": 3,
-                    "status": "in game",
-                    "host_id": 1,
-                    "player_turn": 2,
-                    "players": [{
-                            "id": 1,
-                            "name": "Juan",
-                            "movement_cards": [],
+            expected_response = {
+                    "message": "La partida ha comenzado",
+                    "game": {
+                        "id": 1,
+                        "name": "Game 1",
+                        "player_amount": 3,
+                        "status": "in game",
+                        "host_id": 1,
+                        "player_turn": 2,
+                        "players": [{
+                                "id": 1,
+                                "name": "Juan",
+                                "movement_cards": [],
 
-                            "figure_cards": [
-                                {"type": ['fig01', 'difficult'], "associated_player": 1},
-                                {"type": ['fig02', 'difficult'], "associated_player": 1},
-                                {"type": ['fig03', 'difficult'], "associated_player": 1},
-                            ]
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 1},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 1},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 1},
+                                ]
+                        },
+                            {
+                            "id": 2,
+                                "name": "Pedro",
+                                "movement_cards": [],
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 2},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 2},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 2},
+                                ]
+                        },
+                            {
+                            "id": 3,
+                                "name": "Maria",
+                                "movement_cards": [],
+                                "figure_cards": [
+                                    {"type": ['fig01', 'difficult'], "associated_player": 3},
+                                    {"type": ['fig02', 'difficult'], "associated_player": 3},
+                                    {"type": ['fig03', 'difficult'], "associated_player": 3},
+                                ]
+                        },
+                        ],
                     },
-                        {
-                        "id": 2,
-                            "name": "Pedro",
-                            "movement_cards": [],
-                            "figure_cards": [
-                                {"type": ['fig01', 'difficult'], "associated_player": 2},
-                                {"type": ['fig02', 'difficult'], "associated_player": 2},
-                                {"type": ['fig03', 'difficult'], "associated_player": 2},
-                            ]
-                    },
-                        {
-                        "id": 3,
-                            "name": "Maria",
-                            "movement_cards": [],
-                            "figure_cards": [
-                                {"type": ['fig01', 'difficult'], "associated_player": 3},
-                                {"type": ['fig02', 'difficult'], "associated_player": 3},
-                                {"type": ['fig03', 'difficult'], "associated_player": 3},
-                            ]
-                    },
-                    ],
-                },
-            }
-        
+                }
+            
         assert response.json() == expected_response
     app.dependency_overrides = {}
         

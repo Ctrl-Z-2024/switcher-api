@@ -9,9 +9,11 @@ from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
-from app.db.enums import GameStatus
+from app.db.enums import GameStatus, FigTypeAndDifficulty, AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
 from app.schemas.board_schemas import BoardSchemaOut
+from app.models.figure_card_model import FigureCard
+from app.schemas.figure_card_schema import FigureCardSchema
 
 
 def validate_game_capacity(game: Game):
@@ -33,10 +35,10 @@ def add_player_to_game(game: Game, player: Player, db: Session):
     db.refresh(game)
 
 
-def convert_game_to_schema(game: Game) -> GameSchemaOut:
-    """return the schema view of Game"""
-    game_out = GameSchemaOut(id=game.id, player_amount=game.player_amount, name=game.name,
-                             host_id=game.host_id, player_turn=game.player_turn, status=game.status)
+# def convert_game_to_schema(game: Game) -> GameSchemaOut:
+#     """return the schema view of Game"""
+#     game_out = GameSchemaOut(id=game.id, player_amount=game.player_amount, name=game.name,
+#                              host_id=game.host_id, player_turn=game.player_turn, status=game.status)
 
 
 def search_player_in_game(player: Player, game: Game):
@@ -99,12 +101,22 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
     """return the schema view of Game"""
     game_out = GameSchemaOut(id=game.id, name=game.name, player_amount=game.player_amount, status=game.status,
                              host_id=game.host_id, player_turn=game.player_turn)
+
     game_out.players = [PlayerGameSchemaOut(
-        id=pl.id, name=pl.name, movement_cards=[MovementCardSchema(
+        id=pl.id, name=pl.name, 
+
+        movement_cards=[MovementCardSchema(
             movement_type=mc.movement_type.value,
             associated_player=mc.associated_player,
             in_hand=mc.in_hand
-        ) for mc in pl.movement_cards]) for pl in game.players]
+        ) for mc in pl.movement_cards],
+
+        figure_cards=[FigureCardSchema(
+            type=fc.type_and_difficulty.value,
+            associated_player=fc.associated_player
+        ) for fc in pl.figure_cards if fc.in_hand]
+        
+        ) for pl in game.players]
     return game_out
 
 
@@ -172,7 +184,46 @@ def victory_conditions(game: Game) -> bool:
     else: 
         return False
 
+
 def convert_board_to_schema(game: Game):
     board = game.board
     return BoardSchemaOut(color_distribution=board.color_distribution)
+
+
+def initialize_figure_decks(game: Game, db: Session):
+    diff_cards_per_player = AMOUNT_OF_FIGURES_DIFFICULT * 2 // game.player_amount
+    easy_cards_per_player = AMOUNT_OF_FIGURES_EASY * 2 // game.player_amount
+
+    easy_cards_in_deck = {type: 0 for type in FigTypeAndDifficulty if type.value[1] == "easy"}
+    diff_cards_in_deck = {type: 0 for type in FigTypeAndDifficulty if type.value[1] == "difficult"}
+
+    for player in game.players:
+        for _ in range(easy_cards_per_player):
+            card_type = random.choice([type for type in FigTypeAndDifficulty if type.value[1] == "easy" and easy_cards_in_deck[type] < 2])
+            easy_cards_in_deck[card_type] += 1
+            card = FigureCard(type_and_difficulty=card_type, associated_player=player.id, in_hand=False)
+            db.add(card)
+            
+        for _ in range(diff_cards_per_player):
+            card_type = random.choice([type for type in FigTypeAndDifficulty if type.value[1] == "difficult" and diff_cards_in_deck[type] < 2])
+            diff_cards_in_deck[card_type] += 1
+            card = FigureCard(type_and_difficulty=card_type, associated_player=player.id, in_hand=False)
+            db.add(card)
+
+
+    db.commit()
+    db.refresh(game)
+
+
+def deal_figure_cards_to_player(player: Player, db: Session):
+    figure_cards_in_hand = len([cards for cards in player.figure_cards if cards.in_hand])
+    for _ in range(3 - figure_cards_in_hand):
+        remaining_cards = [card for card in player.figure_cards if not card.in_hand]
+        if len(remaining_cards) > 0:
+            card = random.choice(remaining_cards)
+            card.in_hand = True
+
+
+    db.commit()
+    db.refresh(player)
 

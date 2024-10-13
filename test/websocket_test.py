@@ -332,7 +332,7 @@ def test_victory_when_player_is_alone():
                 "host_id": 2,
                 "player_turn": 1,
                 # Solo Pedro queda en el juego, y ha ganado
-                "players": [{"id": 2, "name": "Pedro", "movement_cards": []}],
+                "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": []}],
             }
         }
 
@@ -383,8 +383,8 @@ def test_no_victory_when_multiple_players_remain():
                 "player_turn": 1,
                 # Pedro y Maria quedan en el juego
                 "players": [
-                    {"id": 2, "name": "Pedro", "movement_cards": []},
-                    {"id": 3, "name": "Maria", "movement_cards": []}
+                    {"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": []},
+                    {"id": 3, "name": "Maria", "movement_cards": [], "figure_cards": []},
                 ],
             }
         }

@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import GameStatus
 from app.models.player_models import Player
+from app.models.figure_card_model import FigureCard
 
 class Game(Base):
     __tablename__ = "game"
@@ -20,8 +21,8 @@ class Game(Base):
     host_id = Column(Integer, ForeignKey("player.id"))
 
     # Relacion One-to-many entre game y jugadores
-    players = relationship("Player", back_populates="game", foreign_keys=[
-                           Player.game_id], primaryjoin="Player.game_id == Game.id")
+    players = relationship("Player", back_populates="game", foreign_keys=[Player.game_id], 
+                           primaryjoin="Player.game_id == Game.id")
     
     # #Relacion one-to-one entre game y borad
     board = relationship ("Board", back_populates="game", uselist=False)

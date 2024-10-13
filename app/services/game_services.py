@@ -11,6 +11,7 @@ from app.schemas.movement_cards_schema import MovementCardSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 import random
+from app.schemas.board_schemas import BoardSchemaOut
 
 
 def validate_game_capacity(game: Game):
@@ -170,4 +171,8 @@ def victory_conditions(game: Game) -> bool:
         return True
     else: 
         return False
+
+def convert_board_to_schema(game: Game):
+    board = game.board
+    return BoardSchemaOut(color_distribution=board.color_distribution)
 

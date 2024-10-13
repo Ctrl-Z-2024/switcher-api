@@ -513,6 +513,7 @@ def test_start_game():
                             name="Game 1", status=GameStatus.waiting, host_id=1)
 
             mock_manager[mock_game.id].broadcast_game_start = AsyncMock(return_value=None)
+            mock_manager[mock_game.id].broadcast_board = AsyncMock(return_value=None)
         
             mock_player = Player(id=1, name="Juan")
             # Mockear random.choice para que siempre devuelva las cartas predefinidas

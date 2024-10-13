@@ -6,5 +6,4 @@ class BoardSchemaIn(BaseModel):
     game_id: int
 
 class BoardSchemaOut(BaseModel):
-    game_id: int
     color_distribution: List[List[Colors]]

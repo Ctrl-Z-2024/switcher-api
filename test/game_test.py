@@ -500,15 +500,15 @@ def test_start_game_movement():
 
         # Cartas de movimiento predefinidas para cada jugador
         mock_movement_choices = [
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO,
-            MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
-            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO
+            MovementType.MOV_01,
+            MovementType.MOV_02,
+            MovementType.MOV_03,
+            MovementType.MOV_04,
+            MovementType.MOV_05,
+            MovementType.MOV_06,
+            MovementType.MOV_07,
+            MovementType.MOV_01,
+            MovementType.MOV_02,
         ]
 
         with patch('random.randint', return_value=2):
@@ -551,11 +551,11 @@ def test_start_game_movement():
                             "id": 1,
                             "name": "Juan",
                             "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
+                                {"movement_type": "mov01",
                                  "associated_player": 1, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
+                                {"movement_type": "mov02",
                                  "associated_player": 1, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
+                                {"movement_type": "mov03",
                                  "associated_player": 1, "in_hand": True},
                             ],
                             "figure_cards": []
@@ -564,11 +564,11 @@ def test_start_game_movement():
                         "id": 2,
                             "name": "Pedro",
                             "movement_cards": [
-                                {"movement_type": "cruce diagonal con un espacio",
+                                {"movement_type": "mov04",
                                  "associated_player": 2, "in_hand": True},
-                                {"movement_type": "cruce en L hacia la derecha con 2 espacios",
+                                {"movement_type": "mov05",
                                  "associated_player": 2, "in_hand": True},
-                                {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                {"movement_type": "mov06",
                                  "associated_player": 2, "in_hand": True},
                             ],
                             "figure_cards": []
@@ -577,11 +577,11 @@ def test_start_game_movement():
                         "id": 3,
                             "name": "Maria",
                             "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
+                                {"movement_type": "mov07",
                                  "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
+                                {"movement_type": "mov01",
                                  "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
+                                {"movement_type": "mov02",
                                  "associated_player": 3, "in_hand": True},
                             ],
                             "figure_cards": []
@@ -655,6 +655,7 @@ def test_start_game_figure_deal():
             patch('random.randint', return_value=2):
             
             mock_manager[mock_game.id].broadcast_game_start = AsyncMock(return_value=None)
+            mock_manager[mock_game.id].broadcast_board = AsyncMock(return_value=None)
             
             app.dependency_overrides[get_db] = lambda: mock_db
             app.dependency_overrides[get_game] = lambda: mock_game
@@ -760,11 +761,11 @@ def test_finish_turn_with_zero_cards():
         mock_db = MagicMock()
 
         mock_movement_cards = [
-            MovementCard(id=1, movement_type=MovementType.CRUCE_L_DERECHA_CON_2_ESPACIOS,
+            MovementCard(id=1, movement_type=MovementType.MOV_04,
                          associated_player=3, in_hand=False),
-            MovementCard(id=2, movement_type=MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+            MovementCard(id=2, movement_type=MovementType.MOV_05,
                          associated_player=3, in_hand=False),
-            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CON_UN_ESPACIO,
+            MovementCard(id=3, movement_type=MovementType.MOV_06,
                          associated_player=3, in_hand=False),
         ]
 
@@ -785,9 +786,9 @@ def test_finish_turn_with_zero_cards():
         app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
 
         mock_movement_choices = [
-            MovementType.CRUCE_LINEAL_CONTIGUO,
-            MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
-            MovementType.CRUCE_DIAGONAL_CONTIGUO,
+            MovementType.MOV_01,
+            MovementType.MOV_02,
+            MovementType.MOV_03,
         ]
 
         with patch('random.choice', side_effect=mock_movement_choices):
@@ -821,11 +822,11 @@ def test_finish_turn_with_zero_cards():
                             "id": 3,
                             "name": "Maria",
                             "movement_cards": [
-                                {"movement_type": "cruce en linea contiguo",
+                                {"movement_type": "mov01",
                                     "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce en linea con un espacio",
+                                {"movement_type": "mov02",
                                     "associated_player": 3, "in_hand": True},
-                                {"movement_type": "cruce diagonal contiguo",
+                                {"movement_type": "mov03",
                                     "associated_player": 3, "in_hand": True},
                             ],
                             "figure_cards": []
@@ -845,11 +846,11 @@ def test_finish_turn_with_two_cards():
         mock_db = MagicMock()
 
         mock_movement_cards = [
-            MovementCard(id=1, movement_type=MovementType.CRUCE_LINEAL_CONTIGUO,
+            MovementCard(id=1, movement_type=MovementType.MOV_01,
                          associated_player=3, in_hand=True),
-            MovementCard(id=2, movement_type=MovementType.CRUCE_LINEAL_CON_UN_ESPACIO,
+            MovementCard(id=2, movement_type=MovementType.MOV_02,
                          associated_player=3, in_hand=True),
-            MovementCard(id=3, movement_type=MovementType.CRUCE_DIAGONAL_CONTIGUO,
+            MovementCard(id=3, movement_type=MovementType.MOV_03,
                          associated_player=3, in_hand=False),
         ]
 
@@ -860,7 +861,7 @@ def test_finish_turn_with_two_cards():
         ]
 
         mock_movement_choices = [
-            MovementType.CRUCE_L_IZQUIERDA_CON_2_ESPACIOS,
+            MovementType.MOV_04,
         ]
 
         # mocked game where it is Maria's turn (index 2)
@@ -904,11 +905,11 @@ def test_finish_turn_with_two_cards():
                             "id": 3,
                             "name": "Maria",
                             "movement_cards": [
-                                    {"movement_type": "cruce en linea contiguo",
+                                    {"movement_type": "mov01",
                                      "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce en linea con un espacio",
+                                    {"movement_type": "mov02",
                                      "associated_player": 3, "in_hand": True},
-                                    {"movement_type": "cruce en L hacia la izquierda con 2 espacios",
+                                    {"movement_type": "mov04",
                                      "associated_player": 3, "in_hand": True},
                             ],
                             "figure_cards": []

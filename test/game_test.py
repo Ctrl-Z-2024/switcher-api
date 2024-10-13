@@ -83,7 +83,6 @@ def test_create_game():
         ]
     }
 
-    # with patch("app.endpoints.game_endpoints.auth_scheme.__call__", return_value=mock_player):
     response = client.post("/games", json=new_game_data,
                            params={"player_id": 1})
     assert response.status_code == 200

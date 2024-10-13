@@ -9,6 +9,7 @@ class GameStatus(Enum):
     waiting = "waiting"
     full = "full"
     in_game = "in game"
+    finished = "finished"
 
 class MovementType(Enum):
     CRUCE_LINEAL_CONTIGUO = "cruce en linea contiguo"

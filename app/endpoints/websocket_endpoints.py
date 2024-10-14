@@ -68,6 +68,7 @@ async def list(websocket: WebSocket):
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        game_list_manager.disconnect(websocket)
         print("Game List Websocket Disconnected")
 
 

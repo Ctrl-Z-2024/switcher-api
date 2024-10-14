@@ -5,6 +5,7 @@ from app.models.game_models import Game
 from app.dependencies.dependencies import get_game_list
 from app.services.game_services import convert_board_to_schema
 from app.models.board_models import Board
+import logging
 
 
 class ConnectionManager:
@@ -14,6 +15,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.add(websocket)
+        
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
@@ -32,9 +34,11 @@ class GameListManager:
 
     async def connect(self, websocket: WebSocket):
         await self.connection_manager.connect(websocket)
+        logging.debug(f"New connection: {websocket.client}. Total connections: {len(self.connection_manager.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         self.connection_manager.disconnect(websocket)
+        logging.debug(f"Disconnected: {websocket.client}. Total connections: {len(self.connection_manager.active_connections)}")
 
     async def broadcast_game_list(self, websocket: WebSocket):
         try:

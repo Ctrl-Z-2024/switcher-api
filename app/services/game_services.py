@@ -178,11 +178,17 @@ def deal_movement_cards_to_player(player: Player, db: Session):
 def victory_conditions(game: Game) -> bool:
     player_alone = game.status == GameStatus.in_game and game.player_amount == 1
     
-    if player_alone:
-        game.status = GameStatus.finished
-        return True
-    else: 
-        return False
+    return player_alone
+
+
+
+def end_game(game: Game, db: Session):
+    game.status = GameStatus.finished
+    for player in game.players:
+        clear_all_cards(player, db)
+    db.commit()
+    db.refresh(game)
+
 
 
 def convert_board_to_schema(game: Game):
@@ -227,3 +233,11 @@ def deal_figure_cards_to_player(player: Player, db: Session):
     db.commit()
     db.refresh(player)
 
+def clear_all_cards(player: Player, db: Session):
+    m_player = db.merge(player)
+    for card in m_player.movement_cards:
+        db.delete(card)
+    for card in m_player.figure_cards:
+        db.delete(card)
+    db.commit()
+    db.refresh(m_player)

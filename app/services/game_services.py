@@ -8,6 +8,7 @@ from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
+from app.schemas.movement_schema import MovementSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus, FigTypeAndDifficulty, AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
@@ -156,6 +157,7 @@ def deal_initial_movement_cards(db: Session, game: Game):
     # Inicializar la distribución de cartas para cada jugador
     for player in players:
         deal_movement_cards(player, db)
+
     db.commit()
 
 
@@ -181,14 +183,13 @@ def victory_conditions(game: Game) -> bool:
     return player_alone
 
 
-
 def end_game(game: Game, db: Session):
     game.status = GameStatus.finished
     for player in game.players:
         clear_all_cards(player, db)
+
     db.commit()
     db.refresh(game)
-
 
 
 def convert_board_to_schema(game: Game):
@@ -216,7 +217,6 @@ def initialize_figure_decks(game: Game, db: Session):
             card = FigureCard(type_and_difficulty=card_type, associated_player=player.id, in_hand=False)
             db.add(card)
 
-
     db.commit()
     db.refresh(game)
 
@@ -229,9 +229,9 @@ def deal_figure_cards_to_player(player: Player, db: Session):
             card = random.choice(remaining_cards)
             card.in_hand = True
 
-
     db.commit()
     db.refresh(player)
+
 
 def clear_all_cards(player: Player, db: Session):
     m_player = db.merge(player)
@@ -239,5 +239,187 @@ def clear_all_cards(player: Player, db: Session):
         db.delete(card)
     for card in m_player.figure_cards:
         db.delete(card)
+
     db.commit()
     db.refresh(m_player)
+
+
+def discard_movement_card(movement: MovementSchema, player: Player, db: Session):
+    movement_card = next((card for card in player.movement_cards if card.movement_type == movement.movement_card.movement_type), None)
+
+    if not movement_card:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Movement card not found in player's hand")
+
+    movement_card.in_hand = False
+
+    db.commit()
+    db.refresh(player)
+
+
+def generate_valid_moves_mov01():
+    valid_moves01 = set()
+
+    # Generate moves for the upper right diagonal -> lower left
+    for row in range(2, 6):
+        for col in range(4):
+            valid_moves01.add((row, col, row - 2, col + 2))
+            valid_moves01.add((row - 2, col + 2, row, col))  # reverse swap
+
+    # Generate moves for the upper left diagonal -> lower right
+    for row in range(2, 6):
+        for col in range(2, 6):
+            valid_moves01.add((row, col, row - 2, col - 2))
+            valid_moves01.add((row - 2, col - 2, row, col))  # reverse swap
+
+    return valid_moves01
+
+
+def generate_valid_moves_mov02():
+    valid_moves02 = set()
+
+    for row in range(6):
+        for col in range(6):
+            # Vertical movements
+            if row + 2 < 6:
+                valid_moves02.add((row, col, row + 2, col))  # to down
+                valid_moves02.add((row + 2, col, row, col))  # to up
+
+            # Horizontal movements
+            if col + 2 < 6:
+                valid_moves02.add((row, col, row, col + 2))  # to right
+                valid_moves02.add((row, col + 2, row, col))  # to left
+
+    return valid_moves02
+
+
+def generate_valid_moves_mov03():
+    valid_moves03 = set()
+
+    for row in range(6):
+        for col in range(6):
+            # Vertical movements
+            if row + 1 < 6:
+                valid_moves03.add((row, col, row + 1, col))  # to down
+                valid_moves03.add((row + 1, col, row, col))  # to up
+
+            if row - 1 >= 0:
+                valid_moves03.add((row, col, row - 1, col))  # to up
+                valid_moves03.add((row - 1, col, row, col))  # to down
+
+            # Horizontal movements
+            if col + 1 < 6:
+                valid_moves03.add((row, col, row, col + 1))  # to right
+                valid_moves03.add((row, col + 1, row, col))  # to left
+
+            if col - 1 >= 0:
+                valid_moves03.add((row, col, row, col - 1))  # to left
+                valid_moves03.add((row, col - 1, row, col))  # to right
+
+    return valid_moves03
+
+def generate_valid_moves_mov04():
+    valid_moves04 = set()
+
+    for row in range(5):
+        for col in range(5):
+
+            valid_moves04.add((row, col, row + 1, col + 1))  # to down and right
+            valid_moves04.add((row + 1, col + 1, row, col))  # reverse swap
+
+            valid_moves04.add((row + 1, col, row, col + 1))  # to down and left
+            valid_moves04.add((row, col + 1, row + 1, col))  # reverse swap
+
+            valid_moves04.add((row, col + 1, row + 1, col))  # to up and left
+            valid_moves04.add((row + 1, col, row, col + 1))  # reverse swap
+
+            valid_moves04.add((row, col, row + 1, col + 1))  # to up and right
+            valid_moves04.add((row + 1, col + 1, row, col))  # reverse swap
+
+    return valid_moves04
+
+def generate_valid_moves_mov05():
+    valid_moves05 = set()
+
+    for row in range(6):
+        for col in range(6):
+            
+            if row - 2 >= 0 and col + 1 < 6:
+                valid_moves05.add((row, col, row - 2, col + 1))  # (x, y) with (x-2, y+1)
+                valid_moves05.add((row - 2, col + 1, row, col))  # reverse swap
+
+            if row - 1 >= 0 and col - 2 >= 0:
+                valid_moves05.add((row, col, row - 1, col - 2))  # (x, y) with (x-1, y-2)
+                valid_moves05.add((row - 1, col - 2, row, col))  # reverse swap
+
+    return valid_moves05
+
+def generate_valid_moves_mov06():
+    valid_moves06 = set()
+
+    for row in range(6):
+        for col in range(6):
+            
+            if row - 2 >= 0 and col - 1 >= 0:
+                valid_moves06.add((row, col, row - 2, col - 1))  # (x, y) with (x-2, y-1)
+                valid_moves06.add((row - 2, col - 1, row, col))  # reverse swap
+
+            if row - 1 >= 0 and col + 2 < 6:
+                valid_moves06.add((row, col, row - 1, col + 2))  # (x, y) with (x-1, y+2)
+                valid_moves06.add((row - 1, col + 2, row, col))  # reverse swap
+
+    return valid_moves06
+
+
+def generate_valid_moves_mov07():
+    valid_moves07 = set()
+
+    for row in range(6):
+        for col in range(6):
+            # Vertical movements with 3 tiles in the middle
+            if row + 4 < 6:
+                valid_moves07.add((row, col, row + 4, col))  # to down
+                valid_moves07.add((row + 4, col, row, col))  # to up
+
+            # Horizontal movements with 3 tiles in the middle
+            if col + 4 < 6:
+                valid_moves07.add((row, col, row, col + 4))  # to right
+                valid_moves07.add((row, col + 4, row, col))  # to left
+
+    return valid_moves07
+
+
+def validate_movement(movement: MovementSchema, game: Game):
+    # Retrieve the type of movement card being used
+    movement_card_type = movement.movement_card.movement_type
+
+    print(movement_card_type)
+
+    # Generate valid moves based on the movement card type
+    if movement_card_type == MovementType.MOV_01:
+        valid_moves = generate_valid_moves_mov01()
+    elif movement_card_type == MovementType.MOV_02:
+        valid_moves = generate_valid_moves_mov02()
+    elif movement_card_type == MovementType.MOV_03:
+        valid_moves = generate_valid_moves_mov03()
+    elif movement_card_type == MovementType.MOV_04:
+        valid_moves = generate_valid_moves_mov04()
+    elif movement_card_type == MovementType.MOV_05:
+        valid_moves = generate_valid_moves_mov05()
+    elif movement_card_type == MovementType.MOV_06:
+        valid_moves = generate_valid_moves_mov06()
+    elif movement_card_type == MovementType.MOV_07:
+        valid_moves = generate_valid_moves_mov07()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Tipo de movimiento desconocido")
+
+    # Extract the coordinates for the pieces being moved
+    x1, y1 = movement.piece_1_coordinates.x, movement.piece_1_coordinates.y
+    x2, y2 = movement.piece_2_coordinates.x, movement.piece_2_coordinates.y
+
+    # Check if the movement is valid
+    if (x1, y1, x2, y2) not in valid_moves:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Movimiento inválido para la carta {movement_card_type}")
+
+    return True  # movement valid

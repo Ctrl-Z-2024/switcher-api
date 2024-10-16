@@ -203,11 +203,12 @@ def calculate_partial_board(game: Game):
     player_partial_movs = sorted(player_partial_movs, key=lambda mov: mov.id)
 
     for mov in player_partial_movs:
-        partial_board[mov.y1][mov.x1], partial_board[mov.y2][mov.x2] = (
-            partial_board[mov.y2][mov.x2], partial_board[mov.y1][mov.x1]
+        partial_board[mov.x1][mov.y1], partial_board[mov.x2][mov.y2] = (
+            partial_board[mov.x2][mov.y2], partial_board[mov.x1][mov.y1]
         )
 
     return partial_board
+
 
 
 

@@ -97,7 +97,7 @@ class GameManager:
         }
         await self.connection_manager.broadcast(event_message)
 
-    async def broadcast_initial_game_connection(self, game: Game):
+    async def broadcast_game(self, game: Game):
         game_schema = convert_game_to_schema(game)
         event_message = {
             "payload": game_schema

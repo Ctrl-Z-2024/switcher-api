@@ -15,7 +15,8 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
-                                            discard_movement_card, validate_movement)
+                                            discard_movement_card, validate_movement,
+                                            make_partial_move)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
@@ -171,6 +172,8 @@ async def add_movement(movement: MovementSchema, player: Player = Depends(auth_s
     validate_movement(movement, game)
 
     discard_movement_card(movement, player, db)
+
+    make_partial_move(movement=movement, player=player, db=db)
 
     return {"message": f"Movimiento realizado por {player.name}"}
 

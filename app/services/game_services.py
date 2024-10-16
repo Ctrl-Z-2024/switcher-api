@@ -1,16 +1,14 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.db.enums import MovementType
 from app.models.game_models import Game
-from app.models.movement_card_model import MovementCard
 from app.models.player_models import Player
 from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
-from app.schemas.movement_schema import MovementSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
-from app.db.enums import GameStatus, FigTypeAndDifficulty, AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
+from app.db.enums import GameStatus, FigTypeAndDifficulty
+from app.db.constants import AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
 from app.schemas.board_schemas import BoardSchemaOut
 from app.models.figure_card_model import FigureCard

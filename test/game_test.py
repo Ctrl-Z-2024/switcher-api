@@ -7,9 +7,11 @@ from app.models.game_models import Game
 from app.models.figure_card_model import FigureCard
 from app.models.player_models import Player
 from app.models.movement_card_model import MovementCard
+from app.models.movement_model import Movement
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 from app.services.game_services import initialize_figure_decks
+
 
 client = TestClient(app)
 

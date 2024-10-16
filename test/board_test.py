@@ -44,8 +44,3 @@ def test_init_board(mocked_random_distribution):
     mock_db.commit()
     mock_db.add.assert_called_once_with(board)
 
-    #Imprimir la matriz de colores para ver la distribucion
-    print("Matriz de colores:")
-    for row in board.color_distribution:
-        print(row)
-

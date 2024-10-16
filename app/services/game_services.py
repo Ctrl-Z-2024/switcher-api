@@ -8,6 +8,7 @@ from app.schemas.game_schemas import GameSchemaOut
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
+from app.schemas.movement_schema import MovementSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus, FigTypeAndDifficulty, AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
@@ -33,12 +34,6 @@ def add_player_to_game(game: Game, player: Player, db: Session):
 
     db.commit()
     db.refresh(game)
-
-
-# def convert_game_to_schema(game: Game) -> GameSchemaOut:
-#     """return the schema view of Game"""
-#     game_out = GameSchemaOut(id=game.id, player_amount=game.player_amount, name=game.name,
-#                              host_id=game.host_id, player_turn=game.player_turn, status=game.status)
 
 
 def search_player_in_game(player: Player, game: Game):
@@ -134,61 +129,19 @@ def assign_next_turn(game: Game):
     game.player_turn = (game.player_turn + 1) % game.player_amount
 
 
-def create_movement_card(player_id: int) -> MovementCard:
-    """Crear una nueva carta de movimiento asociada a un jugador."""
-    random_mov = random.choice(list(MovementType))
-    return MovementCard(
-        movement_type=random_mov,
-        associated_player=player_id,
-        in_hand=True
-    )
-
-
-def deal_movement_cards(player: Player, db: Session):
-    while len(player.movement_cards) < 3:
-        new_card = create_movement_card(player.id)
-        player.movement_cards.append(new_card)
-        db.add(new_card)
-
-
-def deal_initial_movement_cards(db: Session, game: Game):
-    players = game.players
-    # Inicializar la distribución de cartas para cada jugador
-    for player in players:
-        deal_movement_cards(player, db)
-    db.commit()
-
-
-def deal_movement_cards_to_player(player: Player, db: Session):
-    new_player_movement_cards = []
-    
-    for card in player.movement_cards:
-        if not card.in_hand:
-            new_card = create_movement_card(player.id)
-            new_player_movement_cards.append(new_card)
-            db.add(new_card)
-        else:
-            new_player_movement_cards.append(card)
-    
-    player.movement_cards = new_player_movement_cards
-    
-    db.commit()
-    db.refresh(player)
-
 def victory_conditions(game: Game) -> bool:
     player_alone = game.status == GameStatus.in_game and game.player_amount == 1
     
     return player_alone
 
 
-
 def end_game(game: Game, db: Session):
     game.status = GameStatus.finished
     for player in game.players:
         clear_all_cards(player, db)
+
     db.commit()
     db.refresh(game)
-
 
 
 def convert_board_to_schema(game: Game):
@@ -216,7 +169,6 @@ def initialize_figure_decks(game: Game, db: Session):
             card = FigureCard(type_and_difficulty=card_type, associated_player=player.id, in_hand=False)
             db.add(card)
 
-
     db.commit()
     db.refresh(game)
 
@@ -229,9 +181,9 @@ def deal_figure_cards_to_player(player: Player, db: Session):
             card = random.choice(remaining_cards)
             card.in_hand = True
 
-
     db.commit()
     db.refresh(player)
+
 
 def clear_all_cards(player: Player, db: Session):
     m_player = db.merge(player)
@@ -239,5 +191,6 @@ def clear_all_cards(player: Player, db: Session):
         db.delete(card)
     for card in m_player.figure_cards:
         db.delete(card)
+
     db.commit()
     db.refresh(m_player)

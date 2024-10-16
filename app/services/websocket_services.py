@@ -142,3 +142,5 @@ class GameManager:
             "payload": board_schema
         }
         await self.connection_manager.broadcast(event_message)
+
+    # brodcast_tablero_temporal (mismo formato que el de arriba)

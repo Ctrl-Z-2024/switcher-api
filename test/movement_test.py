@@ -10,13 +10,79 @@ from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 from app.schemas.movement_schema import MovementSchema, Coordinate
 from app.schemas.movement_cards_schema import MovementCardSchema
+from app.models.movement_model import Movement
 
 client = TestClient(app)
 
-# ------------------------------------------------- TESTS ABOUT MOVEMENT ---------------------------------------------------------
+# ------------------------------------------------ TESTS ABOUT PARTIAL MOVEMENT ADDITION -----------------------------------------------------
 
+def test_add_partial_move():
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+    
+
+    mock_movement_cards = [
+            MovementCard(id=1, movement_type=MovementType.MOV_01, associated_player=3, in_hand=True),
+        ]
+
+    mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", movement_cards=mock_movement_cards)
+        ]
+    
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+    
+    
+    movement_data = {
+            "movement_card": {
+                "id": 1,
+                "movement_type": MovementType.MOV_01.value,
+                "associated_player": 3,
+                "in_hand": True
+            },
+            "piece_1_coordinates": {
+                "x": 2,
+                "y": 2
+            },
+            "piece_2_coordinates": {
+                "x": 4,
+                "y": 4
+            }
+        }
+    
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+    # This test does not check wether the movement is valid, but rather if the partial move is correctly added to the database.
+    with patch("app.endpoints.game_endpoints.validate_movement") as mock_validate_movement, \
+         patch("app.endpoints.game_endpoints.discard_movement_card") as mock_discard_movement_card:
+        
+        mock_discard_movement_card.return_value = None
+        mock_validate_movement.return_value = None
+
+        client.put("/games/1/movement/add", json=movement_data)
+
+        actual_movement = mock_db.add.call_args[0][0]
+        assert actual_movement.player_id == 3
+        assert actual_movement.movement_type == MovementType.MOV_01
+        assert actual_movement.x1 == 2
+        assert actual_movement.y1 == 2
+        assert actual_movement.x2 == 4
+        assert actual_movement.y2 == 4
+        
+    
+    app.dependency_overrides = {}
+
+# ------------------------------------------------- TESTS ABOUT MOVEMENT VALIDATION ---------------------------------------------------------
+
+# This test also checks if make_partial_move is called.
 def test_add_movement_mov01_succesfull():
-    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, \
+    patch("app.endpoints.game_endpoints.make_partial_move") as mock_make_partial_move:
         mock_db = MagicMock()
 
         mock_movement_cards = [
@@ -62,11 +128,14 @@ def test_add_movement_mov01_succesfull():
 
         assert response.json() == expected_response
         assert response.status_code == 200
+        mock_make_partial_move.assert_called_once()
         
     app.dependency_overrides = {}
 
+# This test also checks if make_partial_move is NOT called.
 def test_add_movement_mov01_fail():
-    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, \
+         patch("app.endpoints.game_endpoints.make_partial_move") as mock_make_partial_move:
         mock_db = MagicMock()
 
         mock_movement_cards = [
@@ -112,6 +181,7 @@ def test_add_movement_mov01_fail():
 
         assert response.json() == expected_response
         assert response.status_code == 400
+        assert mock_make_partial_move.call_count == 0
         
     app.dependency_overrides = {}
 

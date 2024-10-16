@@ -54,8 +54,6 @@ def deal_movement_cards_to_player(player: Player, db: Session):
 def validate_movement(movement: MovementSchema, game: Game):
     # Retrieve the type of movement card being used
     movement_card_type = movement.movement_card.movement_type.name
-    print(movement_card_type)
-
     if movement_card_type not in VALID_MOVES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Tipo de movimiento desconocido")
@@ -86,13 +84,11 @@ def discard_movement_card(movement: MovementSchema, player: Player, db: Session)
 from app.db.constants import VALID_MOVES
 
 def make_partial_move(movement: MovementSchema, player: Player, db: Session):
-    print("Making partial move" + str(movement))
     partial_move = Movement(movement_type=movement.movement_card.movement_type, 
                             final_movement=False, player_id = player.id,
                             x1=movement.piece_1_coordinates.x, y1=movement.piece_1_coordinates.y,
                             x2=movement.piece_2_coordinates.x, y2=movement.piece_2_coordinates.y)
     
     db.add(partial_move)
-    print("the movement was added")
     db.commit()
     db.refresh(partial_move)

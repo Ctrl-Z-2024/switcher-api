@@ -21,6 +21,6 @@ class Movement(Base):
     final_movement = Column(Boolean, nullable = False)
 
     x1 = Column(Integer, nullable = False)
-    x2 = Column(Integer, nullable = False)
     y1 = Column(Integer, nullable = False)
+    x2 = Column(Integer, nullable = False)
     y2 = Column(Integer, nullable = False)

@@ -69,7 +69,6 @@ async def list(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         game_list_manager.disconnect(websocket)
-        print("Game List Websocket Disconnected")
 
 
 @router.websocket("/ws/games/{game_id}")
@@ -89,5 +88,4 @@ async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print("Game Websocket disconnected")
         game_manager.disconnect(websocket)

@@ -46,9 +46,6 @@ class FigTypeAndDifficulty(Enum):
     FIGE_05 = ("fige05", "easy")
     FIGE_06 = ("fige06", "easy")
     FIGE_07 = ("fige07", "easy")
-   
-AMOUNT_OF_FIGURES_EASY = 7
-AMOUNT_OF_FIGURES_DIFFICULT = 18
 
 class Colors(Enum):
     red = "red"

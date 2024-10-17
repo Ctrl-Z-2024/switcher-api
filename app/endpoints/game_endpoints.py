@@ -154,6 +154,11 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
 
     game_out = convert_game_to_schema(game)
 
+    # Actualizamos el tablero y el juego
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_board(game))
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_game(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_finish_turn(game, player_turn_obj.name))
 

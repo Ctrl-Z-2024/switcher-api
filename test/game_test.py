@@ -762,6 +762,9 @@ def test_finish_turn_with_zero_cards():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
 
+        mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_game = AsyncMock()
+
         mock_movement_cards = [
             MovementCard(id=1, movement_type=MovementType.MOV_04,
                          associated_player=3, in_hand=False),
@@ -847,6 +850,9 @@ def test_finish_turn_with_two_cards():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
 
+        mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_game = AsyncMock()
+        
         mock_movement_cards = [
             MovementCard(id=1, movement_type=MovementType.MOV_01,
                          associated_player=3, in_hand=True),

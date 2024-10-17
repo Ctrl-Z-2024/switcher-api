@@ -234,7 +234,9 @@ def remove_all_partial_movements(player: Player, db: Session):
     for partial_movement in partial_movements:
         player.movements.remove(partial_movement)
         db.delete(partial_movement)
+
     db.commit()
+    
 
 def calculate_partial_board(game: Game):
     actual_player = game.player_turn

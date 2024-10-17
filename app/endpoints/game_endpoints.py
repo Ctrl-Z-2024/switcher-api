@@ -175,6 +175,12 @@ async def add_movement(movement: MovementSchema, player: Player = Depends(auth_s
 
     make_partial_move(movement=movement, player=player, db=db)
 
+    asyncio.create_task( 
+        game_connection_managers[game.id].broadcast_partial_board(game))
+    
+    asyncio.create_task( 
+        game_connection_managers[game.id].broadcast_game(game))
+
     return {"message": f"Movimiento realizado por {player.name}"}
 
 

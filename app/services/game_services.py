@@ -192,3 +192,26 @@ def clear_all_cards(player: Player, db: Session):
 
     db.commit()
     db.refresh(m_player)
+
+
+def calculate_partial_board(game: Game):
+    actual_player = game.player_turn
+    actual_board = game.board
+    partial_board = [fila[:] for fila in actual_board.color_distribution]
+    
+    player_partial_movs = [mov for mov in actual_player.movements if not mov.final_movement]
+    player_partial_movs = sorted(player_partial_movs, key=lambda mov: mov.id)
+
+    for mov in player_partial_movs:
+        partial_board[mov.x1][mov.y1], partial_board[mov.x2][mov.y2] = (
+            partial_board[mov.x2][mov.y2], partial_board[mov.x1][mov.y1]
+        )
+
+    return partial_board
+
+
+
+
+
+
+

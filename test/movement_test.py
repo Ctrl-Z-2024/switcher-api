@@ -34,8 +34,7 @@ def test_add_partial_move():
         ]
     
     mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
-    
-    
+
     movement_data = {
             "movement_card": {
                 "id": 1,
@@ -59,10 +58,13 @@ def test_add_partial_move():
 
     # This test does not check wether the movement is valid, but rather if the partial move is correctly added to the database.
     with patch("app.endpoints.game_endpoints.validate_movement") as mock_validate_movement, \
-         patch("app.endpoints.game_endpoints.discard_movement_card") as mock_discard_movement_card:
+         patch("app.endpoints.game_endpoints.discard_movement_card") as mock_discard_movement_card, \
+         patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         
         mock_discard_movement_card.return_value = None
         mock_validate_movement.return_value = None
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         client.put("/games/1/movement/add", json=movement_data)
 
@@ -98,6 +100,8 @@ def test_add_movement_mov01_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -202,6 +206,8 @@ def test_add_movement_mov02_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -302,6 +308,8 @@ def test_add_movement_mov03_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -402,6 +410,8 @@ def test_add_movement_mov04_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -502,6 +512,8 @@ def test_add_movement_mov05_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -602,6 +614,8 @@ def test_add_movement_mov06_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -702,7 +716,9 @@ def test_add_movement_mov07_succesfull():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
-
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
@@ -883,7 +899,8 @@ def test_add_movement_player_not_turn_fail():
 
 def test_add_movement_calls_validate_and_discard():
     with patch("app.endpoints.game_endpoints.validate_movement") as mock_validate, \
-         patch("app.endpoints.game_endpoints.discard_movement_card") as mock_discard:
+         patch("app.endpoints.game_endpoints.discard_movement_card") as mock_discard, \
+         patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         
         mock_db = MagicMock()
 
@@ -895,6 +912,9 @@ def test_add_movement_calls_validate_and_discard():
         
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                          name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+        
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
         
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -957,6 +977,9 @@ def test_add_movement_card_discarded():
         ]
 
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+
+        mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game

@@ -82,7 +82,7 @@ async def game(websocket: WebSocket, game_id: int, db: Session = Depends(get_db)
 
     game = get_game(game_id, db)
 
-    await game_manager.broadcast_initial_game_connection(game)
+    await game_manager.broadcast_game(game)
 
     try:
         while True:

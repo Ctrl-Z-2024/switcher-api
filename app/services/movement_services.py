@@ -81,6 +81,17 @@ def discard_movement_card(movement: MovementSchema, player: Player, db: Session)
     db.commit()
     db.refresh(player)
 
+def reassign_movement_card(movement: MovementSchema, player: Player, db: Session):
+    movement_card = next((card for card in player.movement_cards if card.movement_type == movement.movement_card.movement_type), None)
+
+    if not movement_card:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Movement card not found in player's hand")
+
+    movement_card.in_hand = True
+
+    db.commit()
+    db.refresh(player)
+
 from app.db.constants import VALID_MOVES
 
 def make_partial_move(movement: MovementSchema, player: Player, db: Session):

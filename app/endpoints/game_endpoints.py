@@ -10,7 +10,7 @@ from app.dependencies.dependencies import get_game, get_player, check_name, get_
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
                                         validate_players_amount,  random_initial_turn, update_game_in_db,
-                                        assign_next_turn, victory_conditions, initialize_figure_decks, 
+                                        assign_next_turn, victory_conditions, initialize_figure_decks,
                                         deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
                                         has_partial_movement, remove_last_partial_movement, remove_all_partial_movements)
 from app.models.board_models import Board
@@ -91,7 +91,8 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     if victory_conditions(game):
         end_game(game, db)
-        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(game, game.players[0].name))
+        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
+            game, game.players[0].name))
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
@@ -122,8 +123,8 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game_start(game, player_name))
-    
-    asyncio.create_task( 
+
+    asyncio.create_task(
         game_connection_managers[game.id].broadcast_board(game))
 
     return {"message": "La partida ha comenzado", "game": game_out}
@@ -158,8 +159,9 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
 
     return {"message": "Turno finalizado", "game": game_out}
 
-@router.put("/{id_game}/movement/back", summary="Move a figure back")
-async def undo_movement(player: Player = Depends(auth_scheme), game: Game = Depends(get_game),db: Session = Depends(get_db)):
+
+@router.put("/{id_game}/movement/back", summary="Cancel movement")
+async def undo_movement(player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
     player_turn_obj: Player = game.players[game.player_turn]
 
     if player.id != player_turn_obj.id:
@@ -167,15 +169,21 @@ async def undo_movement(player: Player = Depends(auth_scheme), game: Game = Depe
                             detail="Es necesario que sea tu turno para cancelar el movimiento")
 
     if has_partial_movement(player_turn_obj):
+
         if remove_last_partial_movement(player_turn_obj, db):
-            #asyncio.create_task(game_connection_managers[game.id].broadcast_partial_board(game))
-            #asyncio.create_task(game_connection_managers[game.id].broadcast_game(game))
+
+            # Una vez actualizada la base de datos, actualizamos el tablero y el juego
+            asyncio.create_task(
+                game_connection_managers[game.id].broadcast_partial_board(game))
+            asyncio.create_task(
+                game_connection_managers[game.id].broadcast_game(game))
 
             return Response(status_code=status.HTTP_204_NO_CONTENT)
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="No hay movimientos parciales para eliminar")
-    
+
+
 @router.put("/{id_game}/movement/add", summary="Add a movement to the game")
 async def add_movement(movement: MovementSchema, player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
 
@@ -194,6 +202,12 @@ async def add_movement(movement: MovementSchema, player: Player = Depends(auth_s
     discard_movement_card(movement, player, db)
 
     make_partial_move(movement=movement, player=player, db=db)
+
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_board(game))
+
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_game(game))
 
     return {"message": f"Movimiento realizado por {player.name}"}
 

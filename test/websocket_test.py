@@ -416,3 +416,37 @@ async def test_broadcast_board(mock_websocket, mock_game):
         assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
         assert mock_send_json.call_args_list[0][0][0]["message"] == ""
         assert mock_send_json.call_args_list[0][0][0]["payload"]["color_distribution"] == mock_board.color_distribution
+
+@pytest.mark.asyncio
+async def test_broadcast_partial_board(mock_websocket):
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        game_connection_manager = GameManager()
+
+        mock_board = MagicMock()
+        mock_board.color_distribution = [[Colors.red.value, Colors.blue.value], 
+                                         [Colors.yellow.value, Colors.green.value], 
+                                         [Colors.red.value, Colors.blue.value]]
+
+        mock_player = MagicMock()
+        mock_player.movements = [
+            MagicMock(id=1, y1=0, x1=0, y2=1, x2=1, final_movement=False),
+            MagicMock(id=2, y1=1, x1=0, y2=0, x2=1, final_movement=False),
+            MagicMock(id=3, y1=0, x1=2, y2=1, x2=2, final_movement=False),
+        ]
+
+        mock_game = MagicMock()
+        mock_game.board = mock_board
+        mock_game.player_turn = mock_player
+        
+        expected_partial_board = [[Colors.green.value, Colors.yellow.value], 
+                                  [Colors.blue.value, Colors.red.value], 
+                                  [Colors.blue.value, Colors.red.value]]
+        
+        with patch("app.services.game_services.calculate_partial_board", return_value=expected_partial_board):
+            with patch.object(mock_websocket, "send_json") as mock_send_json:
+                await game_connection_manager.connect(websocket=mock_websocket)
+                await game_connection_manager.broadcast_partial_board(mock_game)
+
+                assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
+                assert mock_send_json.call_args_list[0][0][0]["message"] == ""
+                assert mock_send_json.call_args_list[0][0][0]["payload"] == expected_partial_board

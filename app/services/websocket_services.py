@@ -3,7 +3,7 @@ from fastapi.encoders import jsonable_encoder
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
 from app.dependencies.dependencies import get_game_list
-from app.services.game_services import convert_board_to_schema
+from app.services.game_services import convert_board_to_schema, calculate_partial_board
 from app.models.board_models import Board
 import logging
 
@@ -97,7 +97,7 @@ class GameManager:
         }
         await self.connection_manager.broadcast(event_message)
 
-    async def broadcast_initial_game_connection(self, game: Game):
+    async def broadcast_game(self, game: Game):
         game_schema = convert_game_to_schema(game)
         event_message = {
             "payload": game_schema
@@ -139,5 +139,15 @@ class GameManager:
             "type": "board",
             "message": "",
             "payload": board_schema
+        }
+        await self.connection_manager.broadcast(event_message)
+
+
+    async def broadcast_partial_board(self, game: Game):
+        color_distribution = calculate_partial_board(game)
+        event_message = {
+            "type": "board",
+            "message": "",
+            "payload": color_distribution
         }
         await self.connection_manager.broadcast(event_message)

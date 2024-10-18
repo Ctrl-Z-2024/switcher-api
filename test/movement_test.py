@@ -78,6 +78,150 @@ def test_add_partial_move():
         
     
     app.dependency_overrides = {}
+# ------------------------------------------------ TESTS ABOUT CANCELING A PARTIAL MOVEMENT  -----------------------------------------------------
+def test_undo_movement_success():
+    # Mock de base de datos
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+        mock_db.commit.return_value = None
+
+        mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_game = AsyncMock()
+        
+        # Simulamos el jugador con un movimiento parcial
+        partial_movements = [
+            Movement(id=1, movement_type=MovementType.MOV_01, final_movement=False, x1=1, y1=1, x2=2, y2=2),
+        ]
+        movement_cards = [
+            MovementCard(id=1, movement_type=MovementType.MOV_01, in_hand=False)
+        ]
+        mock_player_turn = Player(id=3, name="Maria", movements=partial_movements, movement_cards=movement_cards)
+
+        # Simulamos el juego
+        mock_game = Game(id=1, players=[mock_player_turn], player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=0)
+
+        # Configuración de dependencias
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player_turn
+
+        # Llamada al cliente para deshacer el movimiento
+        response = client.put("/games/1/movement/back")
+
+        # Verificaciones de la respuesta
+        assert response.status_code == 204  # Eliminación exitosa
+        assert len(mock_player_turn.movements) == 0  # Se eliminó el movimiento parcial
+        assert mock_player_turn.movement_cards[0].in_hand is True  # La carta de movimiento está de nuevo en la mano
+
+        # Limpiar las dependencias al final del test
+        app.dependency_overrides = {}
+def test_undo_movement_forbidden_not_player_turn():
+    # Mock de base de datos
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+        mock_db.commit.return_value = None
+        
+        # Simulamos jugadores en el juego
+        player_turn = Player(id=1, name="Juan", movements=[], movement_cards=[])
+        mock_player_turn = Player(id=2, name="Maria", movements=[], movement_cards=[])
+
+        # Simulamos el juego
+        mock_game = Game(id=1, players=[player_turn, mock_player_turn], player_amount=2, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=0)
+
+        # Configuración de dependencias
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player_turn  # Maria intenta deshacer el movimiento
+
+        # Llamada al cliente para deshacer el movimiento
+        response = client.put("/games/1/movement/back")
+
+        # Verificaciones de la respuesta
+        assert response.status_code == 403  # Prohibido: no es el turno del jugador
+        assert response.json() == {"detail": "Es necesario que sea tu turno para cancelar el movimiento"}  # Verifica el mensaje de error
+
+        # Limpiar las dependencias al final del test
+        app.dependency_overrides = {}
+def test_undo_movement_no_partial_movements():
+    # Mock de base de datos
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+        mock_db.commit.return_value = None
+
+        # Simulamos un jugador que no tiene movimientos parciales
+        mock_player_turn = Player(id=1, name="Juan", movements=[], movement_cards=[])
+
+        # Simulamos el juego
+        mock_game = Game(id=1, players=[mock_player_turn], player_amount=1, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=0)
+
+        # Configuración de dependencias
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player_turn  # Juan intenta deshacer el movimiento
+
+        # Llamada al cliente para deshacer el movimiento
+        response = client.put("/games/1/movement/back")
+
+        # Verificaciones de la respuesta
+        assert response.status_code == 400  # Error: no hay movimientos parciales
+        assert response.json() == {"detail": "No hay movimientos parciales para eliminar"}  # Verifica el mensaje de error
+
+        # Limpiar las dependencias al final del test
+        app.dependency_overrides = {}
+def test_undo_movement_multiple_partial_movements():
+    # Mock de base de datos
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+        mock_db.commit.return_value = None
+
+        mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_game = AsyncMock()
+
+        # Simulamos tres movimientos parciales
+        partial_movements = [
+            Movement(id=1, movement_type=MovementType.MOV_01, final_movement=False, x1=1, y1=1, x2=2, y2=2),
+            Movement(id=2, movement_type=MovementType.MOV_02, final_movement=False, x1=2, y1=2, x2=3, y2=3),
+            Movement(id=3, movement_type=MovementType.MOV_03, final_movement=False, x1=3, y1=3, x2=4, y2=4),
+        ]
+
+        # Simulamos que el jugador tiene tres cartas de movimiento
+        movement_cards = [
+            MovementCard(id=1, movement_type=MovementType.MOV_01, in_hand=False),
+            MovementCard(id=2, movement_type=MovementType.MOV_02, in_hand=False),
+            MovementCard(id=3, movement_type=MovementType.MOV_03, in_hand=False)
+        ]
+
+        # Simulamos que el jugador tiene estos movimientos y cartas
+        mock_player_turn = Player(id=3, name="Maria", movements=partial_movements, movement_cards=movement_cards)
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            mock_player_turn
+        ]
+
+        # Simulamos el juego
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+
+        # Configuración de dependencias
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_game] = lambda: mock_game
+        app.dependency_overrides[auth_scheme] = lambda: mock_player_turn
+
+        # Llamada al cliente para deshacer el movimiento tres veces
+        for _ in range(3):
+            response = client.put("/games/1/movement/back")
+            assert response.status_code == 204  # Eliminación exitosa
+
+        # Verificaciones de que los movimientos han sido eliminados
+        assert len(mock_player_turn.movements) == 0  # Se eliminaron todos los movimientos parciales
+        assert mock_db.delete.call_count == 3  # Se llamó a la eliminación del movimiento en la base de datos tres veces
+
+        # Verificar que las cartas de movimiento se reasignaron correctamente a la mano del jugador
+        for card in mock_player_turn.movement_cards:
+            assert card.in_hand is True  # Todas las cartas de movimiento están de nuevo en la mano
+
+        # Limpiar las dependencias al final del test
+        app.dependency_overrides = {}
 
 # ------------------------------------------------- TESTS ABOUT MOVEMENT VALIDATION ---------------------------------------------------------
 

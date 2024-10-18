@@ -7,7 +7,9 @@ from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
+from app.schemas.movement_schema import MovementSchema
 from app.db.enums import GameStatus, FigTypeAndDifficulty
+from app.services.movement_services import reassign_movement_card
 from app.db.constants import AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
 from app.schemas.board_schemas import BoardSchemaOut
@@ -193,6 +195,48 @@ def clear_all_cards(player: Player, db: Session):
     db.commit()
     db.refresh(m_player)
 
+def is_player_in_turn (player: Player, game: Game):
+    return player.id == game.players[game.player_turn].id
+
+def has_partial_movement(player: Player):
+    for movement in player.movements:
+        if not movement.final_movement:
+            return True
+    return False
+
+def remove_last_partial_movement(player: Player, db: Session) -> bool:
+    partial_movements = [movement for movement in player.movements if not movement.final_movement]
+
+    if not partial_movements or len(partial_movements) > 3:
+        return False
+
+    # Ordenar por id en orden descendente y obtener el último movimiento parcial
+    if len(partial_movements) == 1:
+        last_partial_movement = partial_movements[0]
+    else:
+        last_partial_movement = sorted(partial_movements, key=lambda m: m.id, reverse=True)[0]
+    # Eliminar el movimiento de la base de datos
+
+    reassign_movement_card (last_partial_movement, player, db)
+
+    player.movements.remove(last_partial_movement)
+    db.delete(last_partial_movement)
+    db.commit()
+    
+    return True
+
+def remove_all_partial_movements(player: Player, db: Session):
+    partial_movements = [movement for movement in player.movements if not movement.final_movement]
+
+    if not partial_movements: 
+        return 
+
+    for partial_movement in partial_movements:
+        player.movements.remove(partial_movement)
+        db.delete(partial_movement)
+
+    db.commit()
+    
 
 def calculate_partial_board(game: Game):
     actual_player = game.player_turn

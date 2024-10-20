@@ -91,6 +91,7 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     if victory_conditions(game):
         end_game(game, db)
+        print(game.players)
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
             game, game.players[0].name))
 

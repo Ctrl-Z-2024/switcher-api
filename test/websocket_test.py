@@ -15,6 +15,7 @@ from app.services.game_services import convert_game_to_schema
 from app.services.websocket_services import GameManager
 from app.models.board_models import Board
 from app.db.enums import Colors
+from app.schemas.board_schemas import BoardSchemaOut
 
 
 client = TestClient(app)
@@ -428,25 +429,36 @@ async def test_broadcast_partial_board(mock_websocket):
                                          [Colors.red.value, Colors.blue.value]]
 
         mock_player = MagicMock()
+        mock_player.id = 3
         mock_player.movements = [
             MagicMock(id=1, y1=0, x1=0, y2=1, x2=1, final_movement=False),
             MagicMock(id=2, y1=1, x1=0, y2=0, x2=1, final_movement=False),
             MagicMock(id=3, y1=0, x1=2, y2=1, x2=2, final_movement=False),
         ]
 
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            mock_player
+        ]
+
         mock_game = MagicMock()
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         mock_game.board = mock_board
-        mock_game.player_turn = mock_player
+
         
         expected_partial_board = [[Colors.green.value, Colors.yellow.value], 
                                   [Colors.blue.value, Colors.red.value], 
                                   [Colors.blue.value, Colors.red.value]]
-        
-        with patch("app.services.game_services.calculate_partial_board", return_value=expected_partial_board):
-            with patch.object(mock_websocket, "send_json") as mock_send_json:
-                await game_connection_manager.connect(websocket=mock_websocket)
-                await game_connection_manager.broadcast_partial_board(mock_game)
 
-                assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
-                assert mock_send_json.call_args_list[0][0][0]["message"] == ""
-                assert mock_send_json.call_args_list[0][0][0]["payload"] == expected_partial_board
+        with patch.object(mock_websocket, "send_json") as mock_send_json:
+            await game_connection_manager.connect(websocket=mock_websocket)
+            await game_connection_manager.broadcast_partial_board(mock_game)
+
+            sent_value = mock_send_json.call_args_list[0][0][0]
+            print(sent_value)
+
+            assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
+            assert mock_send_json.call_args_list[0][0][0]["message"] == ""
+            assert mock_send_json.call_args_list[0][0][0]["payload"]["color_distribution"] == expected_partial_board

@@ -96,7 +96,7 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
     db.commit()
     db.refresh(game)
     db.refresh(player)
-
+    
     asyncio.create_task(game_connection_managers[game.id].broadcast_disconnection(
         game=game, player_id=player.id, player_name=player.name))
 

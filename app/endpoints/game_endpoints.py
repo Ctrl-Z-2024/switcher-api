@@ -61,9 +61,15 @@ async def join_game(game: Game = Depends(get_game), player: Player = Depends(aut
 
     - `id_player`: The ID of the player to join the game.
     """
+    player = db.merge(player)
+
     validate_game_capacity(game)
 
     add_player_to_game(game, player, db)
+
+    db.commit()
+    db.refresh(game)
+    db.refresh(player)
 
     asyncio.create_task(game_connection_managers[game.id].broadcast_connection(
         game=game, player_id=player.id, player_name=player.name))
@@ -75,6 +81,7 @@ async def join_game(game: Game = Depends(get_game), player: Player = Depends(aut
 
 @router.put("/{id_game}/quit")
 async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
+    player = db.merge(player)
 
     search_player_in_game(player, game)
 
@@ -86,14 +93,22 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     clear_all_cards(player, db)
 
+    db.commit()
+    db.refresh(game)
+    db.refresh(player)
+    
     asyncio.create_task(game_connection_managers[game.id].broadcast_disconnection(
         game=game, player_id=player.id, player_name=player.name))
 
     if victory_conditions(game):
-        end_game(game, db)
-        print(game.players)
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
             game, game.players[0].name))
+
+        end_game(game, db)
+
+        db.commit()
+        db.refresh(game)
+        db.refresh(player)
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
 
@@ -151,7 +166,9 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
 
     remove_all_partial_movements(player_turn_obj, db)
 
-    update_game_in_db(db, game)
+    db.commit()
+    db.refresh(game)
+    db.refresh(player_turn_obj)
 
     game_out = convert_game_to_schema(game)
 
@@ -161,7 +178,7 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
     asyncio.create_task(
-        game_connection_managers[game.id].broadcast_finish_turn(game, player_turn_obj.name))
+        game_connection_managers[game.id].broadcast_finish_turn(game, game.players[game.player_turn].name))
 
     return {"message": "Turno finalizado", "game": game_out}
 

@@ -273,25 +273,26 @@ async def test_broadcast_start(mock_websocket, mock_game):
         assert mock_send_json.call_args_list[0][0][0] == expected_message_json
         assert mock_send_json2.call_args_list[0][0][0] == expected_message_json
 
+
 @pytest.mark.asyncio
 async def test_websocket_game_reconnection(mock_websocket, mock_game):
     mock_websocket2 = MagicMock(spec=WebSocket)
     game_connection_manager = GameManager()
     await game_connection_manager.connect(websocket=mock_websocket)
     await game_connection_manager.connect(websocket=mock_websocket2)
-    
+
     game_connection_manager.disconnect(mock_websocket)
 
     with patch.object(mock_websocket, "send_json") as mock_send_json, patch.object(mock_websocket2, "send_json") as mock_send_json2:
-        
+
         await game_connection_manager.broadcast_game_start(mock_game, "")
-        
+
         await game_connection_manager.connect(websocket=mock_websocket)
-        
+
         await game_connection_manager.broadcast_game_start(mock_game, "")
-        
-        mock_send_json.assert_called_once() # called strictly once
-        mock_send_json2.assert_called() # called at least once
+
+        mock_send_json.assert_called_once()  # called strictly once
+        mock_send_json2.assert_called()  # called at least once
 
 
 # ------------------------------------------------- TESTS DE VICTORY CONDITIONS ---------------------------------------------------------
@@ -308,8 +309,10 @@ def test_victory_when_player_is_alone():
 
         mock_game = Game(id=1, name="gametest", player_amount=2, status=GameStatus.in_game,
                          host_id=2, player_turn=1, players=mock_list_players)
-        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(return_value=None)
-        mock_manager[mock_game.id].broadcast_game_won = AsyncMock(return_value=None)
+        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(
+            return_value=None)
+        mock_manager[mock_game.id].broadcast_game_won = AsyncMock(
+            return_value=None)
 
         mock_player = mock_list_players[0]  # Juan quiere abandonar
         mock_db.merge.return_value = mock_player
@@ -318,6 +321,14 @@ def test_victory_when_player_is_alone():
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_player
+        
+        def remove_player():
+            new_players = [
+                player for player in mock_game.players if player.id != mock_player.id]
+            mock_game.players = new_players
+            mock_player.game_id = None
+
+        mock_db.commit.side_effect = remove_player
 
         # Hacer la petición PUT con el cliente de prueba
         response = client.put("/games/1/quit")
@@ -328,7 +339,7 @@ def test_victory_when_player_is_alone():
             "game": {
                 "id": 1,
                 "name": "gametest",
-                "player_amount": 1,
+                "player_amount": 0,
                 "status": "finished",  # El estado debe ser 'finished' cuando alguien gana
                 "host_id": 2,
                 "player_turn": 1,
@@ -338,10 +349,12 @@ def test_victory_when_player_is_alone():
         }
 
         # Verificar que se haya llamado a la función broadcast_game_won
-        mock_manager[mock_game.id].broadcast_game_won.assert_called_once_with(mock_game, "Pedro")
+        mock_manager[mock_game.id].broadcast_game_won.assert_called_once_with(
+            mock_game, "Pedro")
 
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}
+
 
 def test_no_victory_when_multiple_players_remain():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
@@ -357,8 +370,9 @@ def test_no_victory_when_multiple_players_remain():
 
         mock_game = Game(id=1, name="gametest", player_amount=3, status=GameStatus.in_game,
                          host_id=2, player_turn=1, players=mock_list_players)
-        
-        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(return_value=None)
+
+        mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(
+            return_value=None)
 
         mock_player = mock_list_players[0]  # Juan quiere abandonar
         mock_db.merge.return_value = mock_player
@@ -367,6 +381,14 @@ def test_no_victory_when_multiple_players_remain():
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_player
+
+        def remove_player():
+            new_players = [
+                player for player in mock_game.players if player.id != mock_player.id]
+            mock_game.players = new_players
+            mock_player.game_id = None
+
+        mock_db.commit.side_effect = remove_player
 
         # Hacer la petición PUT con el cliente de prueba
         response = client.put("/games/1/quit")
@@ -384,8 +406,10 @@ def test_no_victory_when_multiple_players_remain():
                 "player_turn": 1,
                 # Pedro y Maria quedan en el juego
                 "players": [
-                    {"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": []},
-                    {"id": 3, "name": "Maria", "movement_cards": [], "figure_cards": []},
+                    {"id": 2, "name": "Pedro",
+                        "movement_cards": [], "figure_cards": []},
+                    {"id": 3, "name": "Maria",
+                        "movement_cards": [], "figure_cards": []},
                 ],
             }
         }
@@ -397,10 +421,9 @@ def test_no_victory_when_multiple_players_remain():
     app.dependency_overrides = {}
 
 
-
 @pytest.mark.asyncio
 async def test_broadcast_board(mock_websocket, mock_game):
-    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, patch("random.shuffle", side_effect = lambda x: x):
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, patch("random.shuffle", side_effect=lambda x: x):
         game_connection_manager = GameManager()
         mock_board = MagicMock(spec=Board)
         mock_board.color_distribution = []
@@ -416,7 +439,9 @@ async def test_broadcast_board(mock_websocket, mock_game):
         mock_send_json.assert_called_once()
         assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
         assert mock_send_json.call_args_list[0][0][0]["message"] == ""
-        assert mock_send_json.call_args_list[0][0][0]["payload"]["color_distribution"] == mock_board.color_distribution
+        assert mock_send_json.call_args_list[0][0][0]["payload"][
+            "color_distribution"] == mock_board.color_distribution
+
 
 @pytest.mark.asyncio
 async def test_broadcast_partial_board(mock_websocket):
@@ -424,8 +449,8 @@ async def test_broadcast_partial_board(mock_websocket):
         game_connection_manager = GameManager()
 
         mock_board = MagicMock()
-        mock_board.color_distribution = [[Colors.red.value, Colors.blue.value], 
-                                         [Colors.yellow.value, Colors.green.value], 
+        mock_board.color_distribution = [[Colors.red.value, Colors.blue.value],
+                                         [Colors.yellow.value, Colors.green.value],
                                          [Colors.red.value, Colors.blue.value]]
 
         mock_player = MagicMock()
@@ -447,9 +472,8 @@ async def test_broadcast_partial_board(mock_websocket):
                          name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
         mock_game.board = mock_board
 
-        
-        expected_partial_board = [[Colors.green.value, Colors.yellow.value], 
-                                  [Colors.blue.value, Colors.red.value], 
+        expected_partial_board = [[Colors.green.value, Colors.yellow.value],
+                                  [Colors.blue.value, Colors.red.value],
                                   [Colors.blue.value, Colors.red.value]]
 
         with patch.object(mock_websocket, "send_json") as mock_send_json:
@@ -457,7 +481,6 @@ async def test_broadcast_partial_board(mock_websocket):
             await game_connection_manager.broadcast_partial_board(mock_game)
 
             sent_value = mock_send_json.call_args_list[0][0][0]
-            print(sent_value)
 
             assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
             assert mock_send_json.call_args_list[0][0][0]["message"] == ""

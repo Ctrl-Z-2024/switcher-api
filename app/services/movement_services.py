@@ -1,3 +1,4 @@
+from app.db.constants import VALID_MOVES
 from app.schemas.movement_schema import MovementSchema
 from app.models.game_models import Game
 from app.models.player_models import Player
@@ -7,6 +8,7 @@ from app.models.movement_card_model import MovementCard
 import random
 from app.db.enums import MovementType
 from app.models.movement_model import Movement
+
 
 def create_movement_card(player_id: int) -> MovementCard:
     """Crear una nueva carta de movimiento asociada a un jugador."""
@@ -36,7 +38,7 @@ def deal_initial_movement_cards(db: Session, game: Game):
 
 def deal_movement_cards_to_player(player: Player, db: Session):
     new_player_movement_cards = []
-    
+
     for card in player.movement_cards:
         if not card.in_hand:
             new_card = create_movement_card(player.id)
@@ -44,9 +46,9 @@ def deal_movement_cards_to_player(player: Player, db: Session):
             db.add(new_card)
         else:
             new_player_movement_cards.append(card)
-    
+
     player.movement_cards = new_player_movement_cards
-    
+
     db.commit()
     db.refresh(player)
 
@@ -72,36 +74,40 @@ def validate_movement(movement: MovementSchema, game: Game):
 
 def discard_movement_card(movement: MovementSchema, player: Player, db: Session):
     m_player = db.merge(player)
-    movement_card = next((card for card in m_player.movement_cards if card.movement_type == movement.movement_card.movement_type), None)
+    movement_card = next((card for card in m_player.movement_cards if card.movement_type ==
+                         movement.movement_card.movement_type and card.in_hand), None)
 
     if not movement_card:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Movement card not found in player's hand")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Movement card not found in player's hand")
 
     movement_card.in_hand = False
 
     db.commit()
     db.refresh(m_player)
 
+
 def reassign_movement_card(movement: Movement, player: Player, db: Session):
     m_player = db.merge(player)
-    movement_card = next((card for card in m_player.movement_cards if card.movement_type == movement.movement_type), None)
+    movement_card = next(
+        (card for card in m_player.movement_cards if card.movement_type == movement.movement_type), None)
 
     if not movement_card:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Movement card not found in player's hand")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Movement card not found in player's hand")
 
     movement_card.in_hand = True
 
     db.commit()
     db.refresh(m_player)
 
-from app.db.constants import VALID_MOVES
 
 def make_partial_move(movement: MovementSchema, player: Player, db: Session):
-    partial_move = Movement(movement_type=movement.movement_card.movement_type, 
-                            final_movement=False, player_id = player.id,
+    partial_move = Movement(movement_type=movement.movement_card.movement_type,
+                            final_movement=False, player_id=player.id,
                             x1=movement.piece_1_coordinates.x, y1=movement.piece_1_coordinates.y,
                             x2=movement.piece_2_coordinates.x, y2=movement.piece_2_coordinates.y)
-    
+
     db.add(partial_move)
     db.commit()
     db.refresh(partial_move)

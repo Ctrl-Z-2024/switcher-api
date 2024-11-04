@@ -334,7 +334,7 @@ def test_add_movement_mov01_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_01",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -441,7 +441,7 @@ def test_add_movement_mov02_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_02",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -547,7 +547,7 @@ def test_add_movement_mov03_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_03",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -653,7 +653,7 @@ def test_add_movement_mov04_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_04",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -759,7 +759,7 @@ def test_add_movement_mov05_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_05",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -865,7 +865,7 @@ def test_add_movement_mov06_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_06",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -971,7 +971,7 @@ def test_add_movement_mov07_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_07",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response
@@ -1236,7 +1236,7 @@ def test_add_movement_mov01_with_validmov02_fail():
         response = client.put("/games/1/movement/add", json=movement_data)
 
         expected_response = {
-            "detail": "Movimiento inválido para la carta MOV_01",
+            "detail": "Movimiento invalido",
         }
 
         assert response.json() == expected_response

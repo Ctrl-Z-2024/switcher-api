@@ -69,7 +69,7 @@ def validate_movement(movement: MovementSchema, game: Game):
     # Check if the movement is valid
     if (x1, y1, x2, y2) not in valid_moves:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Movimiento inválido para la carta {movement_card_type}")
+                            detail=f"Movimiento invalido")
 
 
 def discard_movement_card(movement: MovementSchema, player: Player, db: Session):

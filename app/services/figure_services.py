@@ -6,6 +6,7 @@ from app.schemas.movement_schema import Coordinate
 from typing import List
 from app.schemas.board_schemas import BoardSchemaOut
 from app.services.game_services import calculate_partial_board
+from app.schemas.figure_schema import FigureInBoardSchema
 
 def is_figure_isolated(tiles:List[Coordinate], board:BoardSchemaOut) -> bool:
     """Check if a figure is isolated. i.e if the adyacent tiles don't share the same color"""
@@ -61,7 +62,7 @@ def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate)
     return valid_path
 
 
-def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut) -> List[List[Coordinate]]:
+def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut) -> List[FigureInBoardSchema]:
     """
     Get all figures of a certain type in the board. If the list is empty, the figure is not in the board.
     """
@@ -72,11 +73,11 @@ def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut)
             for y in range(6):
                 valid_fig = get_path_valid(path, board, Coordinate(x=x, y=y))
                 if valid_fig and is_figure_isolated(valid_fig, board):
-                    figures.append(valid_fig)
+                    figures.append(FigureInBoardSchema(fig=figure_type, tiles=valid_fig))
     return figures
 
 
-def get_all_figures_in_board(game: Game) -> List[List[Coordinate]]:
+def get_all_figures_in_board(game: Game) -> List[FigureInBoardSchema]:
     """
     Get all the figures that are in player's hands.
     """

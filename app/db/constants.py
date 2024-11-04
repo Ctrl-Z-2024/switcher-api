@@ -212,8 +212,6 @@ FIG09_3 = [Movement.RIGHT, Movement.DOWN, Movement.TRIGHT, Movement.DOWN]
 
 FIG10_0 = [Movement.UP,Movement.RIGHT,Movement.RIGHT,Movement.UP]
 FIG10_1 = [Movement.RIGHT,Movement.DOWN,Movement.DOWN,Movement.RIGHT]
-FIG10_2 = [Movement.UP,Movement.RIGHT,Movement.RIGHT,Movement.UP]
-FIG10_3 = [Movement.RIGHT,Movement.DOWN,Movement.DOWN,Movement.RIGHT]
 
 FIG11_0 = [Movement.DOWN, Movement.RIGHT, Movement.TDOWN, Movement.RIGHT]
 FIG11_1 = [Movement.RIGHT, Movement.TDOWN, Movement.UP, Movement.RIGHT]
@@ -272,8 +270,6 @@ FIGE5_3 = [Movement.UP, Movement.UP, Movement.RIGHT]
 
 FIGE6_0 = [Movement.RIGHT, Movement.RIGHT, Movement.RIGHT]
 FIGE6_1 = [Movement.DOWN, Movement.DOWN, Movement.DOWN]
-FIGE6_2 = [Movement.LEFT, Movement.LEFT, Movement.LEFT]
-FIGE6_3 = [Movement.UP, Movement.UP, Movement.UP]
 
 FIGE7_0 = [Movement.RIGHT, Movement.RIGHT, Movement.UP]
 FIGE7_1 = [Movement.DOWN, Movement.DOWN, Movement.RIGHT]
@@ -290,7 +286,7 @@ VALID_PATHS = {
     "fig07": [FIG07_0, FIG07_1, FIG07_2, FIG07_3],
     "fig08": [FIG08_0, FIG08_1, FIG08_2, FIG08_3],
     "fig09": [FIG09_0, FIG09_1, FIG09_2, FIG09_3],
-    "fig10": [FIG10_0, FIG10_1, FIG10_2, FIG10_3],
+    "fig10": [FIG10_0, FIG10_1],
     "fig11": [FIG11_0, FIG11_1, FIG11_2, FIG11_3],
     "fig12": [FIG12_0, FIG12_1],
     "fig13": [FIG13_0, FIG13_1, FIG13_2, FIG13_3],
@@ -304,6 +300,6 @@ VALID_PATHS = {
     "fige03": [FIGE3_0, FIGE3_1],
     "fige04": [FIGE4_0, FIGE4_1, FIGE4_2, FIGE4_3],
     "fige05": [FIGE5_0, FIGE5_1, FIGE5_2, FIGE5_3],
-    "fige06": [FIGE6_0, FIGE6_1, FIGE6_2, FIGE6_3],
+    "fige06": [FIGE6_0, FIGE6_1],
     "fige07": [FIGE7_0, FIGE7_1, FIGE7_2, FIGE7_3],
 }

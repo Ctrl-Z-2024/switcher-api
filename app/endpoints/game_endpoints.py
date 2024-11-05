@@ -1,4 +1,6 @@
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
+from app.schemas.figure_card_schema import FigureCardSchema
+from app.schemas.figure_schema import FigureInBoardSchema
 from app.schemas.movement_schema import MovementSchema
 from fastapi import APIRouter, HTTPException, Depends, status, Response
 from sqlalchemy.orm import Session
@@ -18,6 +20,7 @@ from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
                                             discard_movement_card, validate_movement,
                                             make_partial_move)
+from app.services.figure_services import (get_figure_in_board)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
@@ -256,3 +259,29 @@ def get_games(
         games = db.query(Game).all()
 
     return games
+
+@router.put("/{id_game}/figure/discard", summary="Discard a figure card")
+async def discard_figure_card (game_id: int, figure_card: FigureCardSchema, figure_in_board : FigureInBoardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db)):
+    #OBTENER EL JUEGO
+    game = db.query(Game).filter(Game.id == game_id).first()
+    if not game :
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Juego no encontrado")
+    
+    #Verificar que la carta figura esta en la mano del jugador
+    if figure_card not in player.figure_cards:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
+    
+    figure_type = figure_card.type
+
+    #Verificar que la carta figura esta formada en el tablero
+    if figure_in_board not in get_figure_in_board(figure_type, game):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta formada en el tablero")
+    
+    #verificar color prohibido, todavia no imlpementado creo, no se si es necesario.
+
+    #Registrar la carta figura en el descarte
+    player.figure_cards.remove(figure_card)
+    db.delete(figure_card)
+    db.commit()
+
+    return {"message": "Figure card discarded successfully"}

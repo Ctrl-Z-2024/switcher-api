@@ -96,3 +96,5 @@ def get_all_figures_in_board(game: Game) -> List[FigureInBoardSchema]:
             all_figures.extend(fig_in_board)
 
     return all_figures
+
+

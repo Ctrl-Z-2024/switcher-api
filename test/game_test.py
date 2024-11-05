@@ -538,6 +538,8 @@ def test_start_game_movement():
 
             mock_manager[mock_game.id].broadcast_game_start = AsyncMock(
                 return_value=None)
+            mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(
+                return_value=None)
             mock_manager[mock_game.id].broadcast_board = AsyncMock(
                 return_value=None)
 
@@ -684,6 +686,8 @@ def test_start_game_figure_deal():
 
             mock_manager[mock_game.id].broadcast_game_start = AsyncMock(
                 return_value=None)
+            mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(
+                return_value=None)
             mock_manager[mock_game.id].broadcast_board = AsyncMock(
                 return_value=None)
 
@@ -803,6 +807,7 @@ def test_finish_turn_with_zero_cards():
         mock_db = MagicMock()
 
         mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_figures_in_board = AsyncMock()
         mock_manager.__getitem__().broadcast_game = AsyncMock()
 
         mock_movement_cards = [
@@ -892,6 +897,7 @@ def test_finish_turn_with_two_cards():
         mock_db = MagicMock()
 
         mock_manager.__getitem__().broadcast_partial_board = AsyncMock()
+        mock_manager.__getitem__().broadcast_figures_in_board = AsyncMock()
         mock_manager.__getitem__().broadcast_game = AsyncMock()
 
         mock_movement_cards = [

@@ -142,6 +142,10 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_board(game))
+    
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_figures_in_board(game)
+    )
 
     return {"message": "La partida ha comenzado", "game": game_out}
 
@@ -176,6 +180,8 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_partial_board(game))
     asyncio.create_task(
+        game_connection_managers[game.id].broadcast_figures_in_board(game))
+    asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_finish_turn(game, game.players[game.player_turn].name))
@@ -198,6 +204,8 @@ async def undo_movement(player: Player = Depends(auth_scheme), game: Game = Depe
             # Una vez actualizada la base de datos, actualizamos el tablero y el juego
             asyncio.create_task(
                 game_connection_managers[game.id].broadcast_partial_board(game))
+            asyncio.create_task(
+                game_connection_managers[game.id].broadcast_figures_in_board(game))
             asyncio.create_task(
                 game_connection_managers[game.id].broadcast_game(game))
 
@@ -228,7 +236,8 @@ async def add_movement(movement: MovementSchema, player: Player = Depends(auth_s
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_partial_board(game))
-
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_figures_in_board(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
 

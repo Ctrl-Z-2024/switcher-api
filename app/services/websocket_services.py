@@ -1,5 +1,6 @@
 from fastapi import WebSocket, WebSocketException, status
 from fastapi.encoders import jsonable_encoder
+from app.services.figure_services import get_all_figures_in_board
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
 from app.dependencies.dependencies import get_game_list
@@ -151,3 +152,12 @@ class GameManager:
             "payload": color_distribution
         }
         await self.connection_manager.broadcast(event_message)
+
+    async def broadcast_figures_in_board(self, game:Game):
+        figures = get_all_figures_in_board(game)
+        event_message = {
+            "type": "figures",
+            "message": "",
+            "payload": figures
+        }
+        await self.connection_manager.broadcast(event_message)       

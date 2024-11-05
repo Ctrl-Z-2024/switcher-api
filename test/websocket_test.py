@@ -12,7 +12,7 @@ from app.endpoints.websocket_endpoints import handle_creation, handle_change, ha
 import pytest
 from app.endpoints.websocket_endpoints import game_list_manager
 from app.services.game_services import convert_game_to_schema
-from app.services.websocket_services import GameManager
+from app.services.websocket_services import ConnectionManager, GameManager
 from app.models.board_models import Board
 from app.db.enums import Colors
 from app.schemas.board_schemas import BoardSchemaOut
@@ -43,6 +43,12 @@ def mock_game():
 def mock_empty_game():
     game = MagicMock(spec=Game)
     game.id = 2
+
+@pytest.fixture
+def game_manager():
+    manager = GameManager()
+    manager.connection_manager = ConnectionManager()
+    return manager
 
 
 # === Game List's Websocket tests ===
@@ -485,3 +491,45 @@ async def test_broadcast_partial_board(mock_websocket):
             assert mock_send_json.call_args_list[0][0][0]["type"] == "board"
             assert mock_send_json.call_args_list[0][0][0]["message"] == ""
             assert mock_send_json.call_args_list[0][0][0]["payload"]["color_distribution"] == expected_partial_board
+
+
+@pytest.mark.asyncio
+async def test_broadcast_figures_in_board(mock_websocket):
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        game_connection_manager = GameManager()
+
+        figures = [
+            {"figure": "figure1", "tiles": [{"x": 0, "y": 0}, {"x": 1, "y": 0}]},
+            {"figure": "figure2", "tiles": [{"x": 2, "y": 0}, {"x": 3, "y": 0}]},
+            {"figure": "figure3", "tiles": [{"x": 4, "y": 0}, {"x": 5, "y": 0}]}
+        ]
+
+        mock_player = MagicMock()
+        mock_player.id = 3
+
+        mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            mock_player
+        ]
+
+        mock_game = MagicMock()
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+
+        expected_event_message = {
+            "type": "figures",
+            "message": "",
+            "payload": figures
+        }
+
+        with patch("app.services.websocket_services.get_all_figures_in_board", return_value=figures):
+            with patch.object(mock_websocket, "send_json") as mock_send_json:
+                await game_connection_manager.connect(websocket=mock_websocket)
+                await game_connection_manager.broadcast_figures_in_board(mock_game)
+
+                sent_value = mock_send_json.call_args_list[0][0][0]
+
+                assert sent_value["type"] == "figures"
+                assert sent_value["message"] == ""
+                assert sent_value["payload"] == figures

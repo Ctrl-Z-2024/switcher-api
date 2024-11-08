@@ -17,7 +17,7 @@ from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
                                             discard_movement_card, validate_movement,
-                                            make_partial_move)
+                                            make_partial_move, reassign_all_movement_cards)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
 from typing import List, Optional
@@ -161,6 +161,8 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder finalizarlo")
+    
+    reassign_all_movement_cards(player_turn_obj, db)
 
     deal_movement_cards_to_player(player_turn_obj, db)
 

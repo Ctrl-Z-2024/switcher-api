@@ -13,19 +13,19 @@ def is_figure_isolated(tiles:List[Coordinate], board:BoardSchemaOut) -> bool:
     for tile in tiles:
         #print("checking: " + str(tile))
         if tile.y > 0:
-            if board.color_distribution[tile.y - 1][tile.x] == board.color_distribution[tile.y][tile.x] and Coordinate(x=tile.x, y=tile.y -1) not in tiles:
+            if board.color_distribution[tile.x][tile.y-1] == board.color_distribution[tile.x][tile.y] and Coordinate(x=tile.x, y=tile.y -1) not in tiles:
                 #print("checking up: " + board.color_distribution[tile.y - 1][tile.x].value + "is equal to " + board.color_distribution[tile.y][tile.x].value + "and does not belong in " + str(tiles))
                 return False
         if tile.y < len(board.color_distribution) - 1:
-            if board.color_distribution[tile.y + 1][tile.x] == board.color_distribution[tile.y][tile.x] and Coordinate(x=tile.x, y=tile.y + 1) not in tiles:
+            if board.color_distribution[tile.x][tile.y+1] == board.color_distribution[tile.x][tile.y] and Coordinate(x=tile.x, y=tile.y + 1) not in tiles:
                 #print("checking down: " + str(board.color_distribution[tile.y + 1][tile.x].value) + "is equal to " + board.color_distribution[tile.y][tile.x].value + "and does not belong in " + str(tiles))
                 return False
         if tile.x > 0:
-            if board.color_distribution[tile.y][tile.x - 1] == board.color_distribution[tile.y][tile.x] and Coordinate(x=tile.x - 1, y=tile.y) not in tiles:
+            if board.color_distribution[tile.x-1][tile.y] == board.color_distribution[tile.x][tile.y] and Coordinate(x=tile.x - 1, y=tile.y) not in tiles:
                 #print("checking left: " + board.color_distribution[tile.y][tile.x - 1].value + "is equal to " + board.color_distribution[tile.y][tile.x].value + "and does not belong in " + str(tiles))
                 return False
         if tile.x < len(board.color_distribution[0]) - 1:
-            if board.color_distribution[tile.y][tile.x + 1] == board.color_distribution[tile.y][tile.x] and Coordinate(x=tile.x + 1, y=tile.y) not in tiles:
+            if board.color_distribution[tile.x+1][tile.y] == board.color_distribution[tile.x][tile.y] and Coordinate(x=tile.x + 1, y=tile.y) not in tiles:
                 #print("checking right: " + board.color_distribution[tile.y][tile.x+1].value + "is equal to " + board.color_distribution[tile.y][tile.x].value + "and does not belong in " + str(tiles))
                 return False
     return True
@@ -47,8 +47,8 @@ def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate)
             next_tile = Coordinate(x=current_tile.x + 1, y=current_tile.y)
         else:
             return []
-
-        if actual_board[next_tile.y][next_tile.x] == actual_board[current_tile.y][current_tile.x]:
+    
+        if actual_board[next_tile.x][next_tile.y] == actual_board[current_tile.x][current_tile.y]:
             #For tmoves, append the tile that's outside the path and continue traveling with the previous tile.
             #This assures that each tile is only appended once.
             if mov in (Movement.UP, Movement.DOWN, Movement.LEFT, Movement.RIGHT):

@@ -107,13 +107,13 @@ def test_get_figures_in_board_4_8(mock_game_1):
         mock_calculate_partial_board.return_value = mock_board
         response = get_all_figures_in_board(mock_game_1)
         expected_response = [
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_04 , tiles=[Coordinate(x=0, y=1), Coordinate(x=0, y=2), Coordinate(x=1, y=2), Coordinate(x=1, y=3), Coordinate(x=2, y=3)]),
-        FigureInBoardSchema(tiles=[Coordinate(x=0, y=0), Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=3, y=0), Coordinate(x=4, y=0)], fig=FigTypeAndDifficulty.FIG_05),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_06, tiles=[Coordinate(x=1, y=1), Coordinate(x=2, y=1), Coordinate(x=3, y=1), Coordinate(x=3, y=2), Coordinate(x=3, y=3)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_07 , tiles=[Coordinate(x=0, y=3), Coordinate(x=0, y=4), Coordinate(x=1, y=4), Coordinate(x=2, y=4), Coordinate(x=3, y=4)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_08 , tiles=[Coordinate(x=4, y=1), Coordinate(x=4, y=2), Coordinate(x=4, y=3), Coordinate(x=4, y=4), Coordinate(x=5, y=4)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_04, tiles=[Coordinate(x=2, y=1), Coordinate(x=3, y=1), Coordinate(x=2, y=0), Coordinate(x=1, y=0), Coordinate(x=3, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_05, tiles=[Coordinate(x=0, y=1), Coordinate(x=0, y=4), Coordinate(x=0, y=0), Coordinate(x=0, y=3), Coordinate(x=0, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_06, tiles=[Coordinate(x=1, y=2), Coordinate(x=1, y=1), Coordinate(x=2, y=3), Coordinate(x=3, y=3), Coordinate(x=1, y=3)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_07, tiles=[Coordinate(x=4, y=4), Coordinate(x=2, y=4), Coordinate(x=3, y=4), Coordinate(x=1, y=4), Coordinate(x=4, y=5)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_08, tiles=[Coordinate(x=4, y=0), Coordinate(x=4, y=3), Coordinate(x=4, y=2), Coordinate(x=3, y=0), Coordinate(x=4, y=1)]),
         ]
-
+        # done
         response = convert_tiles_to_set(response)
         expected_response = convert_tiles_to_set(expected_response)
 
@@ -121,9 +121,9 @@ def test_get_figures_in_board_4_8(mock_game_1):
 
 
 
-def test_get_figures_in_board_1_3and9(mock_game_1):
+def test_get_figures_in_board_1_3(mock_game_1):
     """
-    Mass test for fig1-fig3, and fig9. fig1 appears twice in the board, and thus it is detected twice.
+    Mass test for fig1-fig3. fig1 appears twice in the board, and thus it is detected twice.
     """
     mock_board = MagicMock(spec=Board)
     mock_board.color_distribution = [[Colors.red,Colors.red,Colors.red,Colors.blue,Colors.yellow, Colors.yellow],
@@ -139,11 +139,10 @@ def test_get_figures_in_board_1_3and9(mock_game_1):
         response = get_all_figures_in_board(mock_game_1)
 
         expected_response = [
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[Coordinate(x=0, y=0), Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=1, y=1), Coordinate(x=1, y=2)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01 , tiles=[Coordinate(x=3, y=2), Coordinate(x=4, y=2), Coordinate(x=5, y=2), Coordinate(x=4, y=3), Coordinate(x=4, y=4)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_02 , tiles=[Coordinate(x=1, y=5), Coordinate(x=1, y=4), Coordinate(x=1, y=3), Coordinate(x=2, y=3), Coordinate(x=2, y=2)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_03 , tiles=[Coordinate(x=2, y=1), Coordinate(x=3, y=1), Coordinate(x=4, y=1), Coordinate(x=4, y=0), Coordinate(x=5, y=0)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_09, tiles=[Coordinate(x=2, y=4), Coordinate(x=3, y=4), Coordinate(x=3, y=3), Coordinate(x=3, y=5), Coordinate(x=4, y=5)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[Coordinate(x=0, y=1), Coordinate(x=2, y=1), Coordinate(x=0, y=0), Coordinate(x=1, y=1), Coordinate(x=0, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[Coordinate(x=4, y=4), Coordinate(x=2, y=4), Coordinate(x=3, y=4), Coordinate(x=2, y=3), Coordinate(x=2, y=5)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_02, tiles=[Coordinate(x=1, y=2), Coordinate(x=0, y=4), Coordinate(x=1, y=4), Coordinate(x=0, y=5), Coordinate(x=1, y=3)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_03, tiles=[Coordinate(x=3, y=1), Coordinate(x=5, y=1), Coordinate(x=2, y=2), Coordinate(x=3, y=2), Coordinate(x=4, y=1)]),
         ]
 
         response = convert_tiles_to_set(response)
@@ -154,7 +153,7 @@ def test_get_figures_in_board_1_3and9(mock_game_1):
     
 def test_get_figures_in_board_10_14(mock_game_2):
     """
-    Mass test for fig10-fig14. fig11 appears twice.
+    Mass test for fig10-fig14.
     """
     mock_board = MagicMock(spec=Board)
     mock_board.color_distribution = [[Colors.red, Colors.yellow, Colors.yellow, Colors.yellow, Colors.yellow, Colors.blue],
@@ -170,12 +169,11 @@ def test_get_figures_in_board_10_14(mock_game_2):
         response = get_all_figures_in_board(mock_game_2)
 
         expected_response = [
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_10, tiles=[Coordinate(x=0, y=4), Coordinate(x=0, y=3), Coordinate(x=1, y=3), Coordinate(x=2, y=3), Coordinate(x=2, y=2)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_11, tiles=[Coordinate(x=0, y=0), Coordinate(x=0, y=1), Coordinate(x=1, y=1), Coordinate(x=1, y=2), Coordinate(x=2, y=1)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_11, tiles=[Coordinate(x=3, y=2), Coordinate(x=4, y=2), Coordinate(x=4, y=1), Coordinate(x=5, y=1), Coordinate(x=4, y=3)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_12, tiles=[Coordinate(x=3, y=3), Coordinate(x=3, y=4), Coordinate(x=4, y=4), Coordinate(x=5, y=4), Coordinate(x=5, y=5)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_13, tiles=[Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=3, y=0), Coordinate(x=4, y=0), Coordinate(x=3, y=1)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_14, tiles=[Coordinate(x=0, y=5), Coordinate(x=1, y=5), Coordinate(x=2, y=5), Coordinate(x=2, y=4), Coordinate(x=3, y=5)]),
+        
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_10, tiles=[Coordinate(x=4, y=4), Coordinate(x=5, y=5), Coordinate(x=4, y=3), Coordinate(x=4, y=5), Coordinate(x=3, y=3)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_12, tiles=[Coordinate(x=4, y=0), Coordinate(x=3, y=1), Coordinate(x=3, y=0), Coordinate(x=2, y=2), Coordinate(x=3, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_13, tiles={Coordinate(x=5, y=1), Coordinate(x=4, y=2), Coordinate(x=5, y=0), Coordinate(x=5, y=3), Coordinate(x=5, y=2)}),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_14, tiles={Coordinate(x=0, y=1), Coordinate(x=0, y=4), Coordinate(x=0, y=3), Coordinate(x=0, y=2), Coordinate(x=1, y=3)}),
         ]
 
         response = convert_tiles_to_set(response)
@@ -203,10 +201,10 @@ def test_get_figures_in_board_15_18(mock_game_2):
         response = get_all_figures_in_board(mock_game_2)
 
         expected_response = [
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_15,tiles=[Coordinate(x=0, y=0), Coordinate(x=0, y=1), Coordinate(x=1, y=1), Coordinate(x=1, y=2), Coordinate(x=0, y=2)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_16,tiles=[Coordinate(x=2, y=3), Coordinate(x=3, y=3), Coordinate(x=3, y=4), Coordinate(x=3, y=5), Coordinate(x=2, y=5)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_17,tiles=[Coordinate(x=0, y=4), Coordinate(x=1, y=4), Coordinate(x=2, y=4), Coordinate(x=1, y=3), Coordinate(x=1, y=5)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_18,tiles=[Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=3, y=0), Coordinate(x=2, y=1), Coordinate(x=3, y=1)])
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_15, tiles=[Coordinate(x=0, y=1), Coordinate(x=1, y=2), Coordinate(x=0, y=3), Coordinate(x=0, y=2), Coordinate(x=1, y=3)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_16, tiles=[Coordinate(x=4, y=3), Coordinate(x=3, y=3), Coordinate(x=5, y=3), Coordinate(x=3, y=2), Coordinate(x=5, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_17, tiles=[Coordinate(x=4, y=0), Coordinate(x=3, y=1), Coordinate(x=5, y=1), Coordinate(x=4, y=2), Coordinate(x=4, y=1)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_18, tiles=[Coordinate(x=2, y=1), Coordinate(x=0, y=0), Coordinate(x=1, y=1), Coordinate(x=2, y=0), Coordinate(x=1, y=0)]),
         ]
 
         response = convert_tiles_to_set(response)
@@ -234,13 +232,13 @@ def test_get_figures_in_board_fige1_7(mock_game_3):
         response = get_all_figures_in_board(mock_game_3)
 
         expected_response = [
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_01, tiles=[Coordinate(x=2, y=5), Coordinate(x=3, y=5), Coordinate(x=3, y=4), Coordinate(x=4, y=4)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_02, tiles=[Coordinate(x=1, y=0), Coordinate(x=1, y=1), Coordinate(x=2, y=0), Coordinate(x=2, y=1)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_03, tiles=[Coordinate(x=1, y=2), Coordinate(x=2, y=2), Coordinate(x=2, y=3), Coordinate(x=3, y=3)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_04, tiles=[Coordinate(x=0, y=4), Coordinate(x=1, y=4), Coordinate(x=1, y=3), Coordinate(x=2, y=4)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_05, tiles=[Coordinate(x=4, y=0), Coordinate(x=4, y=1), Coordinate(x=4, y=2), Coordinate(x=3, y=2)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_06, tiles=[Coordinate(x=0, y=0), Coordinate(x=0, y=1), Coordinate(x=0, y=2), Coordinate(x=0, y=3)]),
-        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_07, tiles=[Coordinate(x=4, y=3), Coordinate(x=5, y=3), Coordinate(x=5, y=4), Coordinate(x=5, y=5)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_01, tiles=[Coordinate(x=3, y=2), Coordinate(x=3, y=3), Coordinate(x=2, y=1), Coordinate(x=2, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_02, tiles=[Coordinate(x=0, y=1), Coordinate(x=1, y=1), Coordinate(x=1, y=2), Coordinate(x=0, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_03, tiles=[Coordinate(x=5, y=3), Coordinate(x=4, y=3), Coordinate(x=4, y=4), Coordinate(x=5, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_04, tiles=[Coordinate(x=3, y=1), Coordinate(x=4, y=0), Coordinate(x=4, y=1), Coordinate(x=4, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_05, tiles=[Coordinate(x=4, y=5), Coordinate(x=5, y=5), Coordinate(x=3, y=4), Coordinate(x=3, y=5)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_06, tiles=[Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=3, y=0), Coordinate(x=0, y=0)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_07, tiles=[Coordinate(x=2, y=3), Coordinate(x=2, y=4), Coordinate(x=0, y=4), Coordinate(x=1, y=4)]),
         ]
 
         response = convert_tiles_to_set(response)

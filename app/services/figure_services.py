@@ -67,7 +67,7 @@ def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut)
     Get all figures of a certain type in the board. If the list is empty, the figure is not in the board.
     """
     figures = []
-    possible_paths = VALID_PATHS[figure_type.value[0]]
+    possible_paths = VALID_PATHS[figure_type[0]]
     for path in possible_paths:
         for x in range(6):
             for y in range(6):
@@ -82,16 +82,16 @@ def get_all_figures_in_board(game: Game) -> List[FigureInBoardSchema]:
     Get all the figures that are in player's hands.
     """
     board = calculate_partial_board(game)
-    figures = []
+    # figures = []
     all_figures = []
 
-    for player in game.players:
-        for card in player.figure_cards:
-            if card.type_and_difficulty not in figures:
-                figures.append(card.type_and_difficulty)
+    # for player in game.players:
+    #     for card in player.figure_cards:
+    #         if card.type_and_difficulty not in figures:
+    #             figures.append(card.type_and_difficulty)
     
-    for fig in figures:
-        fig_in_board = get_figure_in_board(figure_type=fig, board=board)
+    for fig in FigTypeAndDifficulty:
+        fig_in_board = get_figure_in_board(figure_type=fig.value, board=board)
         if fig_in_board:
             all_figures.extend(fig_in_board)
 

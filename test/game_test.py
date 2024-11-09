@@ -1,16 +1,23 @@
 from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi.testclient import TestClient
+import pytest
 from app.main import app
 from app.db.db import get_db
-from app.db.enums import GameStatus, MovementType, FigTypeAndDifficulty
+from app.db.enums import GameStatus, MovementType, FigTypeAndDifficulty 
+from app.models.board_models import Board
+from app.schemas.figure_schema import FigureInBoardSchema, FigTypeAndDifficulty, Coordinate
+from app.schemas.figure_card_schema import FigureCardSchema
 from app.models.game_models import Game
 from app.models.figure_card_model import FigureCard
+from app.schemas.figure_schema import FigureInBoardSchema
 from app.models.player_models import Player
 from app.models.movement_card_model import MovementCard
 from app.models.movement_model import Movement
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
 from app.services.game_services import initialize_figure_decks
+from app.endpoints.game_endpoints import discard_figure_card
+
 
 
 client = TestClient(app)
@@ -649,7 +656,6 @@ def test_start_game_incorrect_player_amount():
 
 # ------------------------------------------------- TESTS DE CARTAS DE FIGURA ----------------------------------------------------
 
-
 def test_start_game_figure_deal():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
@@ -798,6 +804,48 @@ def test_initialization_deck():
 
     app.dependency_overrides = {}
 
+@pytest.mark.asyncio
+async def test_discard_figure_card():
+    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_db = MagicMock()
+
+        # Crear lista de jugadores
+        mock_list_players = [
+            Player(id=1, name="Juan", game_id=1, movement_cards=[], figure_cards=[
+                FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
+            ]),
+            Player(id=2, name="Pedro", game_id=1, movement_cards=[], figure_cards=[]),
+            Player(id=3, name="Maria", game_id=1, movement_cards=[], figure_cards=[])
+        ]
+        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                         name="Game 1", status=GameStatus.waiting, host_id=1)
+
+        mock_player = mock_list_players[0]
+        mock_coordinates = Coordinate(x=0, y=0)
+        mock_tiles = [mock_coordinates]
+        mock_figure_card = FigureCardSchema(id=1, type=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
+        mock_figure_in_board = FigureInBoardSchema(fig = FigTypeAndDifficulty.FIG_01, tiles = mock_tiles)
+
+        figure_type = FigTypeAndDifficulty.FIG_01
+
+        def mock_get_figure_in_board(figure_type, mock_game):
+            return [mock_figure_in_board]
+
+        def mock_calculate_partial_board(game):
+            return game.board
+
+        with patch('app.endpoints.game_endpoints.get_figure_in_board', side_effect=mock_get_figure_in_board), \
+             patch('app.endpoints.game_endpoints.calculate_partial_board', side_effect=mock_calculate_partial_board), \
+             patch('app.endpoints.game_endpoints.delete_movement_cards_not_in_hand', return_value=None), \
+             patch('app.endpoints.game_endpoints.auth_scheme', return_value=mock_player), \
+             patch('app.endpoints.game_endpoints.get_db', return_value=mock_db):
+
+            response = await discard_figure_card(game_id=1, figure_card=mock_figure_card, figure_in_board=mock_figure_in_board, player=mock_player, db=mock_db)
+
+            assert response == {"message": "Figure card discarded successfully"}
+            assert mock_player.figure_cards == []
+            mock_db.delete.assert_called_once_with(mock_figure_card)
+            mock_db.commit.assert_called_once()
 
 # ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 

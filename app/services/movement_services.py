@@ -111,3 +111,11 @@ def make_partial_move(movement: MovementSchema, player: Player, db: Session):
     db.add(partial_move)
     db.commit()
     db.refresh(partial_move)
+
+
+def delete_movement_cards_not_in_hand (player: Player, db: Session):
+    for movement_card in player.movement_cards:
+        if not movement_card.in_hand:
+            db.delete(movement_card)
+    db.commit()
+    db.refresh(player)

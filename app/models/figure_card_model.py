@@ -10,6 +10,7 @@ class FigureCard(Base):
     type_and_difficulty = Column(Enum(FigTypeAndDifficulty), nullable=False)
     in_hand = Column(Boolean, default=False)
     associated_player = Column(Integer, ForeignKey("player.id"), nullable=True, default=None)
+    blocked = Column(Boolean, default=False)
 
     player = relationship("Player", back_populates="figure_cards", foreign_keys=[associated_player],
                           primaryjoin="FigureCard.associated_player == Player.id")

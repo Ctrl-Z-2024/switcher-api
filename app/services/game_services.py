@@ -88,7 +88,7 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
                              host_id=game.host_id, player_turn=game.player_turn)
 
     game_out.players = [PlayerGameSchemaOut(
-        id=pl.id, name=pl.name,
+        id=pl.id, name=pl.name, blocked=pl.blocked,
 
         movement_cards=[MovementCardSchema(
             movement_type=mc.movement_type.value,
@@ -98,7 +98,8 @@ def convert_game_to_schema(game: Game) -> GameSchemaOut:
 
         figure_cards=[FigureCardSchema(
             type=fc.type_and_difficulty.value,
-            associated_player=fc.associated_player
+            associated_player=fc.associated_player,
+            blocked=fc.blocked
         ) for fc in pl.figure_cards if fc.in_hand]
 
     ) for pl in game.players]
@@ -154,7 +155,7 @@ def initialize_figure_decks(game: Game, db: Session):
                 [type for type in FigTypeAndDifficulty if type.value[1] == "easy" and easy_cards_in_deck[type] < 2])
             easy_cards_in_deck[card_type] += 1
             card = FigureCard(type_and_difficulty=card_type,
-                              associated_player=player.id, in_hand=False)
+                              associated_player=player.id, in_hand=False, blocked=False)
             db.add(card)
 
         for _ in range(diff_cards_per_player):
@@ -162,7 +163,7 @@ def initialize_figure_decks(game: Game, db: Session):
                 [type for type in FigTypeAndDifficulty if type.value[1] == "difficult" and diff_cards_in_deck[type] < 2])
             diff_cards_in_deck[card_type] += 1
             card = FigureCard(type_and_difficulty=card_type,
-                              associated_player=player.id, in_hand=False)
+                              associated_player=player.id, in_hand=False, blocked=False)
             db.add(card)
 
     db.commit()
@@ -170,17 +171,18 @@ def initialize_figure_decks(game: Game, db: Session):
 
 
 def deal_figure_cards_to_player(player: Player, db: Session):
-    figure_cards_in_hand = len(
-        [cards for cards in player.figure_cards if cards.in_hand])
-    for _ in range(3 - figure_cards_in_hand):
-        remaining_cards = [
-            card for card in player.figure_cards if not card.in_hand]
-        if len(remaining_cards) > 0:
-            card = random.choice(remaining_cards)
-            card.in_hand = True
+    if not player.blocked:
+        figure_cards_in_hand = len(
+            [cards for cards in player.figure_cards if cards.in_hand])
+        for _ in range(3 - figure_cards_in_hand):
+            remaining_cards = [
+                card for card in player.figure_cards if not card.in_hand]
+            if len(remaining_cards) > 0:
+                card = random.choice(remaining_cards)
+                card.in_hand = True
 
-    db.commit()
-    db.refresh(player)
+        db.commit()
+        db.refresh(player)
 
 
 def clear_all_cards(player: Player, db: Session):
@@ -262,3 +264,16 @@ def calculate_partial_board(game: Game):
     board_sch = BoardSchemaOut(color_distribution=partial_board)
 
     return board_sch
+
+
+def verify_discard_blocked_card_condition(player: Player, figure_card: FigureCard):
+    """
+    We verify that the blocked player does not have more than two cards in_hand
+    """ 
+    cards_in_hand = [card for card in player.figure_cards if card.in_hand]
+
+    if figure_card.blocked and len(cards_in_hand) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes descartar una carta bloqueada si tienes otras cartas en mano."
+        )

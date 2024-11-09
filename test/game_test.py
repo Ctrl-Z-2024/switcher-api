@@ -807,13 +807,15 @@ def test_initialization_deck():
 @pytest.mark.asyncio
 async def test_discard_figure_card():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
+        mock_manager.__getitem__.return_value.broadcast_board = AsyncMock(return_value=None)
+        mock_manager.__getitem__.return_value.broadcast_game = AsyncMock(return_value=None)
+
         mock_db = MagicMock()
 
         # Crear lista de jugadores
+        mock_figure_card = FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
         mock_list_players = [
-            Player(id=1, name="Juan", game_id=1, movement_cards=[], figure_cards=[
-                FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
-            ]),
+            Player(id=1, name="Juan", game_id=1, movement_cards=[], figure_cards=[mock_figure_card]),
             Player(id=2, name="Pedro", game_id=1, movement_cards=[], figure_cards=[]),
             Player(id=3, name="Maria", game_id=1, movement_cards=[], figure_cards=[])
         ]
@@ -823,7 +825,6 @@ async def test_discard_figure_card():
         mock_player = mock_list_players[0]
         mock_coordinates = Coordinate(x=0, y=0)
         mock_tiles = [mock_coordinates]
-        mock_figure_card = FigureCardSchema(id=1, type=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
         mock_figure_in_board = FigureInBoardSchema(fig = FigTypeAndDifficulty.FIG_01, tiles = mock_tiles)
 
         figure_type = FigTypeAndDifficulty.FIG_01
@@ -844,6 +845,8 @@ async def test_discard_figure_card():
 
             assert response == {"message": "Figure card discarded successfully"}
             assert mock_player.figure_cards == []
+            mock_manager.__getitem__.return_value.broadcast_board.assert_called_once()
+            mock_manager.__getitem__.return_value.broadcast_game.assert_called_once()
             mock_db.delete.assert_called_once_with(mock_figure_card)
             mock_db.commit.assert_called_once()
 

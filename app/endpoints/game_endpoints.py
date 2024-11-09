@@ -1,5 +1,6 @@
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
 from app.schemas.figure_card_schema import FigureCardSchema
+from app.models.figure_card_model import FigureCard
 from app.schemas.figure_schema import FigureInBoardSchema
 from app.schemas.movement_schema import MovementSchema
 from fastapi import APIRouter, HTTPException, Depends, status, Response
@@ -276,12 +277,12 @@ async def discard_figure_card (game_id: int, figure_card: FigureCardSchema, figu
     game = db.query(Game).filter(Game.id == game_id).first()
     if not game :
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Juego no encontrado")
-    
+
     #Verificar que la carta figura esta en la mano del jugador
     if figure_card not in player.figure_cards:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
-    
-    figure_type = figure_card.type
+      raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
+
+    figure_type = figure_card.type_and_difficulty
 
     #Verificar que la carta figura esta formada en el tablero
     if figure_in_board not in get_figure_in_board(figure_type, game):
@@ -300,7 +301,7 @@ async def discard_figure_card (game_id: int, figure_card: FigureCardSchema, figu
         
     delete_movement_cards_not_in_hand(player, db)
 
-    #verificar color prohibido, todavia no imlpementado creo, no se si es necesario.
+    #verificar color prohibido, todavia no imlpementado.
 
     #Registrar la carta figura en el descarte
     player.figure_cards.remove(figure_card)

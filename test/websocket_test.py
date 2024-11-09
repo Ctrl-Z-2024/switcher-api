@@ -309,8 +309,8 @@ def test_victory_when_player_is_alone():
 
         # Crear lista de jugadores y un juego mock
         mock_list_players = [
-            Player(id=1, name="Juan"),
-            Player(id=2, name="Pedro")
+            Player(id=1, name="Juan", blocked=False),
+            Player(id=2, name="Pedro", blocked=False)
         ]
 
         mock_game = Game(id=1, name="gametest", player_amount=2, status=GameStatus.in_game,
@@ -350,7 +350,7 @@ def test_victory_when_player_is_alone():
                 "host_id": 2,
                 "player_turn": 1,
                 # Solo Pedro queda en el juego, y ha ganado
-                "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": []}],
+                "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": [], "blocked":False}],
             }
         }
 
@@ -369,9 +369,9 @@ def test_no_victory_when_multiple_players_remain():
 
         # Crear lista de jugadores y un juego mock
         mock_list_players = [
-            Player(id=1, name="Juan"),
-            Player(id=2, name="Pedro"),
-            Player(id=3, name="Maria")
+            Player(id=1, name="Juan", blocked=False),
+            Player(id=2, name="Pedro", blocked=False),
+            Player(id=3, name="Maria", blocked=False)
         ]
 
         mock_game = Game(id=1, name="gametest", player_amount=3, status=GameStatus.in_game,
@@ -413,9 +413,9 @@ def test_no_victory_when_multiple_players_remain():
                 # Pedro y Maria quedan en el juego
                 "players": [
                     {"id": 2, "name": "Pedro",
-                        "movement_cards": [], "figure_cards": []},
+                        "movement_cards": [], "figure_cards": [], "blocked":False},
                     {"id": 3, "name": "Maria",
-                        "movement_cards": [], "figure_cards": []},
+                        "movement_cards": [], "figure_cards": [], "blocked":False},
                 ],
             }
         }

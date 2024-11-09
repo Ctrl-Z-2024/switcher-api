@@ -20,6 +20,7 @@ class PlayerGameSchemaOut(PlayerSchemaIn):
     id: int
     movement_cards: list[MovementCardSchema] = []
     figure_cards: list[FigureCardSchema] = []
+    blocked: bool
     
     class ConfigDict:
         from_attributes = True

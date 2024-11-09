@@ -28,7 +28,7 @@ async def create_player(player: Annotated[PlayerSchemaIn, Body()],
     
     access_token = str(uuid.uuid4())
 
-    db_player = Player(name=player.name, token=access_token)
+    db_player = Player(name=player.name, token=access_token, blocked=False)
     db.add(db_player)
     db.commit()
     db.refresh(db_player)

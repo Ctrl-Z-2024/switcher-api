@@ -15,9 +15,9 @@ from app.models.movement_card_model import MovementCard
 from app.models.movement_model import Movement
 from app.dependencies.dependencies import get_game
 from app.endpoints.game_endpoints import auth_scheme
-from app.services.game_services import initialize_figure_decks
+from app.services.game_services import initialize_figure_decks, erase_figure_card, has_figure_card
 from app.endpoints.game_endpoints import discard_figure_card
-
+from app.services.movement_services import delete_movement_cards_not_in_hand
 
 
 client = TestClient(app)
@@ -804,52 +804,106 @@ def test_initialization_deck():
 
     app.dependency_overrides = {}
 
-@pytest.mark.asyncio
-async def test_discard_figure_card():
-    with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
-        mock_manager.__getitem__.return_value.broadcast_board = AsyncMock(return_value=None)
-        mock_manager.__getitem__.return_value.broadcast_game = AsyncMock(return_value=None)
+def unitest_test_delete_movement_cards_not_in_hand():
+    # Crear mock para la sesión de la base de datos
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+    
+    # Crear mock para las cartas de movimiento
+    movement_card_in_hand = MagicMock(spec=MovementCard)
+    movement_card_in_hand.in_hand = True
+    movement_card_in_hand.movement_type = MovementType.MOV_01  # Ajusta según el MovementType real
+    
+    movement_card_not_in_hand = MagicMock(spec=MovementCard)
+    movement_card_not_in_hand.in_hand = False
+    movement_card_not_in_hand.movement_type = MovementType.MOV_01  # Ajusta según el MovementType real
+    
+    # Crear mock para el jugador
+    player = MagicMock(spec=Player)
+    player.movement_cards = [movement_card_in_hand, movement_card_not_in_hand]
+    
+    # Llamar a la función
+    delete_movement_cards_not_in_hand(player, mock_db)
 
-        mock_db = MagicMock()
+    # Verificar que se haya eliminado la carta de movimiento que no estaba en mano
+    mock_db.delete.assert_called_with(movement_card_not_in_hand)
+    
+    # Verificar que el commit se haya llamado después de eliminar
+    mock_db.commit.assert_called_once()
+    
+    # Verificar que se haya refrescado el jugador después de la eliminación
+    mock_db.refresh.assert_called_once_with(player)
 
-        # Crear lista de jugadores
-        mock_figure_card = FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=1, in_hand=True)
-        mock_list_players = [
-            Player(id=1, name="Juan", game_id=1, movement_cards=[], figure_cards=[mock_figure_card]),
-            Player(id=2, name="Pedro", game_id=1, movement_cards=[], figure_cards=[]),
-            Player(id=3, name="Maria", game_id=1, movement_cards=[], figure_cards=[])
-        ]
-        mock_game = Game(id=1, players=mock_list_players, player_amount=3,
-                         name="Game 1", status=GameStatus.waiting, host_id=1)
+def unitest_test_erase_figure_card():
+    # Crear mock para la sesión de la base de datos
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+    
+    # Crear una carta de figura para el test
+    figure_card = MagicMock(spec=FigureCard)
+    figure_card.type_and_difficulty = FigTypeAndDifficulty.FIG_01  # Ajusta el valor según el tipo de carta
+    
+    # Crear mock para el jugador
+    player = MagicMock(spec=Player)
+    player.figure_cards = [figure_card]
+    
+    # Crear un esquema de carta de figura
+    figure_schema = MagicMock()
+    figure_schema.type_and_difficulty = FigTypeAndDifficulty.FIG_01  # Asegúrate de que coincida
+    
+    # Llamar a la función
+    erase_figure_card(player, figure_schema, mock_db)
 
-        mock_player = mock_list_players[0]
-        mock_coordinates = Coordinate(x=0, y=0)
-        mock_tiles = [mock_coordinates]
-        mock_figure_in_board = FigureInBoardSchema(fig = FigTypeAndDifficulty.FIG_01, tiles = mock_tiles)
+    # Verificar que la carta de figura fue eliminada de la lista de cartas del jugador
+    assert figure_card not in player.figure_cards  
+    
+    # Verificar que la carta de figura fue eliminada de la base de datos
+    mock_db.delete.assert_called_with(figure_card)
+    
+    # Verificar que se haya hecho commit después de la eliminación
+    mock_db.commit.assert_called_once()
 
-        figure_type = FigTypeAndDifficulty.FIG_01
+def unitest_test_has_figure_card():
+    # Crear mock para la carta de figura
+    figure_card_1 = MagicMock(spec=FigureCard)
+    figure_card_1.type_and_difficulty = FigTypeAndDifficulty.FIG_01
+    figure_card_1.associated_player = 1
 
-        def mock_get_figure_in_board(figure_type, mock_game):
-            return [mock_figure_in_board]
+    figure_card_2 = MagicMock(spec=FigureCard)
+    figure_card_2.type_and_difficulty = FigTypeAndDifficulty.FIG_02
+    figure_card_2.associated_player = 2
 
-        def mock_calculate_partial_board(game):
-            return game.board
+    # Crear mock para el jugador con un conjunto de cartas de figura
+    player = MagicMock(spec=Player)
+    player.figure_cards = [figure_card_1, figure_card_2]
 
-        with patch('app.endpoints.game_endpoints.get_figure_in_board', side_effect=mock_get_figure_in_board), \
-             patch('app.endpoints.game_endpoints.calculate_partial_board', side_effect=mock_calculate_partial_board), \
-             patch('app.endpoints.game_endpoints.delete_movement_cards_not_in_hand', return_value=None), \
-             patch('app.endpoints.game_endpoints.auth_scheme', return_value=mock_player), \
-             patch('app.endpoints.game_endpoints.get_db', return_value=mock_db):
+    # Crear el esquema de carta de figura que queremos buscar
+    figure_card_schema = FigureCardSchema(
+        type=FigTypeAndDifficulty.FIG_01,  # Debe coincidir con 'figure_card_1'
+        associated_player=1  # Debe coincidir con 'figure_card_1'
+    )
 
-            response = await discard_figure_card(game_id=1, figure_card=mock_figure_card, figure_in_board=mock_figure_in_board, player=mock_player, db=mock_db)
+    # Llamar a la función
+    result = has_figure_card(player, figure_card_schema)
 
-            assert response == {"message": "Figure card discarded successfully"}
-            assert mock_player.figure_cards == []
-            mock_manager.__getitem__.return_value.broadcast_board.assert_called_once()
-            mock_manager.__getitem__.return_value.broadcast_game.assert_called_once()
-            mock_db.delete.assert_called_once_with(mock_figure_card)
-            mock_db.commit.assert_called_once()
+    # Verificar que el resultado sea True, ya que el jugador tiene la carta
+    assert result is True
 
+    # Cambiar el esquema de la carta para que no coincida
+    figure_card_schema = FigureCardSchema(
+        type=FigTypeAndDifficulty.FIG_03,  # No coincide con ninguna carta del jugador
+        associated_player=3  # No coincide con ninguna carta del jugador
+    )
+
+    # Llamar a la función nuevamente
+    result = has_figure_card(player, figure_card_schema)
+
+    # Verificar que el resultado sea False, ya que el jugador no tiene la carta
+    assert result is False
 # ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 
 

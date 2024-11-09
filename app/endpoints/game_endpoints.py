@@ -15,7 +15,8 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
                                         validate_players_amount,  random_initial_turn, update_game_in_db,
                                         assign_next_turn, victory_conditions, initialize_figure_decks,
                                         deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
-                                        has_partial_movement, remove_last_partial_movement, remove_all_partial_movements, calculate_partial_board)
+                                        has_partial_movement, remove_last_partial_movement, remove_all_partial_movements,
+                                        calculate_partial_board, has_figure_card, erase_figure_card)
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
@@ -271,20 +272,23 @@ def get_games(
     return games
 
 @router.put("/{id_game}/figure/discard", summary="Discard a figure card")
-async def discard_figure_card (game_id: int, figure_card: FigureCardSchema, figure_in_board : FigureInBoardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db)):
-  
-    #OBTENER EL JUEGO
-    game = db.query(Game).filter(Game.id == game_id).first()
-    if not game :
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Juego no encontrado")
+async def discard_figure_card (figure_card: FigureCardSchema, figure_in_board : FigureInBoardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
 
     #Verificar que la carta figura esta en la mano del jugador
-    if figure_card not in player.figure_cards:
+    player_turn_obj: Player = game.players[game.player_turn]
+    
+    if player.id != player_turn_obj.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Es necesario que sea tu turno para poder realizar un movimiento")
+
+    
+    if has_figure_card(figure_card, player_turn_obj) == False:
       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
 
-    figure_type = figure_card.type_and_difficulty
+    figure_type = figure_card.type
 
     #Verificar que la carta figura esta formada en el tablero
+
     if figure_in_board not in get_figure_in_board(figure_type, game):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta formada en el tablero")
     
@@ -299,15 +303,12 @@ async def discard_figure_card (game_id: int, figure_card: FigureCardSchema, figu
     for movement in player.movements:
         movement.final_movement = True
         
-    delete_movement_cards_not_in_hand(player, db)
+    delete_movement_cards_not_in_hand(player_turn_obj, db)
 
     #verificar color prohibido, todavia no imlpementado.
 
     #Registrar la carta figura en el descarte
-    player.figure_cards.remove(figure_card)
-    db.delete(figure_card)
-    db.commit()
-    
+    erase_figure_card(player_turn_obj,figure_card, db)
     asyncio.create_task(
     game_connection_managers[game.id].broadcast_game(game))
 

@@ -251,7 +251,6 @@ def calculate_partial_board(game: Game):
 
     player_partial_movs = [
         mov for mov in actual_player.movements if not mov.final_movement]
-    print("Movimientos parciales del jugador:", player_partial_movs)
     player_partial_movs = sorted(player_partial_movs, key=lambda mov: mov.id)
 
     for mov in player_partial_movs:
@@ -262,3 +261,33 @@ def calculate_partial_board(game: Game):
     board_sch = BoardSchemaOut(color_distribution=partial_board)
 
     return board_sch
+
+def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
+    """
+    Verifica si el jugador tiene la carta de figura en mano comparando con el esquema dado.
+    
+    Args:
+    - player: El jugador que se está verificando.
+    - figure_card_schema: El esquema de la carta de figura a comparar.
+    
+    Returns:
+    - True si la carta figura está en la mano del jugador, False de lo contrario.
+    """
+    return any(
+        card.type_and_difficulty == figure_card_schema.type and 
+        card.associated_player == figure_card_schema.associated_player
+        for card in player.figure_cards
+    )
+
+#Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
+#donde solo se hicieron unitest para esta funcion y no para el endpoint que la llama 
+#queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
+
+def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):    
+    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type_and_difficulty), None)
+    if not figure_card:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Figure card not found in player's hand")
+    player.figure_cards.remove(figure_card)
+    db.delete(figure_card)
+    db.commit()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import relationship
 from app.db.db import Base
 from app.db.enums import PlayerState
@@ -13,6 +13,7 @@ class Player(Base):
     name = Column(String, nullable = False)
     playerState = Column(Enum(PlayerState), nullable = False, default = PlayerState.SEARCHING)
     token = Column(String, default = None)
+    blocked = Column(Boolean, default=False)
 
     #relation many-to-one between player and game
     game_id = Column(Integer, ForeignKey("game.id"), nullable = True, default = None)
@@ -25,5 +26,5 @@ class Player(Base):
                                 primaryjoin="Player.id == FigureCard.associated_player")
     
     movements = relationship("Movement", back_populates="player", foreign_keys=[Movement.player_id],
-                                primaryjoin="Player.id == Movement.player_id")
+                            primaryjoin="Player.id == Movement.player_id")
     

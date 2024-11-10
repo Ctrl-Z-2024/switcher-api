@@ -36,21 +36,6 @@ def deal_initial_movement_cards(db: Session, game: Game):
     db.commit()
 
 
-def deal_movement_cards_to_player(player: Player, db: Session):
-    new_player_movement_cards = []
-
-    for card in player.movement_cards:
-        if not card.in_hand:
-            new_card = create_movement_card(player.id)
-            new_player_movement_cards.append(new_card)
-            db.add(new_card)
-        else:
-            new_player_movement_cards.append(card)
-
-    player.movement_cards = new_player_movement_cards
-
-    db.commit()
-    db.refresh(player)
 
 
 def validate_movement(movement: MovementSchema, game: Game):

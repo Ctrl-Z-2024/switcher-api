@@ -195,7 +195,7 @@ def test_join_game():
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_player
-        
+
         def add_player():
             mock_game.players.append(mock_player)
             mock_player.game_id = mock_game.id
@@ -347,7 +347,7 @@ def test_quit_game_host_cannot_leave():
     app.dependency_overrides[get_game] = lambda: mock_game
 
     app.dependency_overrides[auth_scheme] = lambda: mock_player
-    
+
     mock_db.merge.return_value = mock_player
 
     # Hacer la petición PUT con el cliente de prueba
@@ -529,9 +529,12 @@ def test_start_game_movement():
 
         # Crear lista de jugadores
         mock_list_players = [
-            Player(id=1, name="Juan", game_id=1, movement_cards=[], blocked=False),
-            Player(id=2, name="Pedro", game_id=1, movement_cards=[], blocked=False),
-            Player(id=3, name="Maria", game_id=1, movement_cards=[], blocked=False)
+            Player(id=1, name="Juan", game_id=1,
+                   movement_cards=[], blocked=False),
+            Player(id=2, name="Pedro", game_id=1,
+                   movement_cards=[], blocked=False),
+            Player(id=3, name="Maria", game_id=1,
+                   movement_cards=[], blocked=False)
         ]
 
         # Cartas de movimiento predefinidas para cada jugador
@@ -678,9 +681,12 @@ def test_start_game_figure_deal():
 
         # Crear lista de jugadores
         mock_list_players = [
-            Player(id=1, name="Juan", game_id=1, movement_cards=[], blocked=False),
-            Player(id=2, name="Pedro", game_id=1, movement_cards=[], blocked=False),
-            Player(id=3, name="Maria", game_id=1, movement_cards=[], blocked=False)
+            Player(id=1, name="Juan", game_id=1,
+                   movement_cards=[], blocked=False),
+            Player(id=2, name="Pedro", game_id=1,
+                   movement_cards=[], blocked=False),
+            Player(id=3, name="Maria", game_id=1,
+                   movement_cards=[], blocked=False)
         ]
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
                          name="Game 1", status=GameStatus.waiting, host_id=1, forbidden_color=Colors.none)
@@ -742,7 +748,7 @@ def test_start_game_figure_deal():
                                     {"type": ['fig03', 'difficult'],
                                         "associated_player": 1, "blocked": False},
                             ],
-                            "blocked": False
+                        "blocked": False
                     },
                         {
                         "id": 2,
@@ -756,7 +762,7 @@ def test_start_game_figure_deal():
                                     {"type": ['fig03', 'difficult'],
                                         "associated_player": 2, "blocked": False},
                                 ],
-                                "blocked": False
+                        "blocked": False
                     },
                         {
                         "id": 3,
@@ -770,7 +776,7 @@ def test_start_game_figure_deal():
                                     {"type": ['fig03', 'difficult'],
                                         "associated_player": 3, "blocked": False},
                                 ],
-                                "blocked": False
+                        "blocked": False
                     },
                     ],
                 },
@@ -789,7 +795,8 @@ def test_initialization_deck():
     # Crear lista de jugadores
     mock_list_players = [
         Player(id=1, name="Juan", game_id=1, movement_cards=[], blocked=False),
-        Player(id=2, name="Pedro", game_id=1, movement_cards=[], blocked=False),
+        Player(id=2, name="Pedro", game_id=1,
+               movement_cards=[], blocked=False),
         Player(id=3, name="Maria", game_id=1, movement_cards=[], blocked=False)
     ]
     mock_game = Game(id=1, players=mock_list_players, player_amount=3,
@@ -823,37 +830,41 @@ def test_initialization_deck():
 
     app.dependency_overrides = {}
 
+
 def unitest_test_delete_movement_cards_not_in_hand():
     # Crear mock para la sesión de la base de datos
     mock_db = MagicMock()
     mock_db.add.return_value = None
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = None
-    
+
     # Crear mock para las cartas de movimiento
     movement_card_in_hand = MagicMock(spec=MovementCard)
     movement_card_in_hand.in_hand = True
-    movement_card_in_hand.movement_type = MovementType.MOV_01  # Ajusta según el MovementType real
-    
+    # Ajusta según el MovementType real
+    movement_card_in_hand.movement_type = MovementType.MOV_01
+
     movement_card_not_in_hand = MagicMock(spec=MovementCard)
     movement_card_not_in_hand.in_hand = False
-    movement_card_not_in_hand.movement_type = MovementType.MOV_01  # Ajusta según el MovementType real
-    
+    # Ajusta según el MovementType real
+    movement_card_not_in_hand.movement_type = MovementType.MOV_01
+
     # Crear mock para el jugador
     player = MagicMock(spec=Player)
     player.movement_cards = [movement_card_in_hand, movement_card_not_in_hand]
-    
+
     # Llamar a la función
     delete_movement_cards_not_in_hand(player, mock_db)
 
     # Verificar que se haya eliminado la carta de movimiento que no estaba en mano
     mock_db.delete.assert_called_with(movement_card_not_in_hand)
-    
+
     # Verificar que el commit se haya llamado después de eliminar
     mock_db.commit.assert_called_once()
-    
+
     # Verificar que se haya refrescado el jugador después de la eliminación
     mock_db.refresh.assert_called_once_with(player)
+
 
 def unitest_test_erase_figure_card():
     # Crear mock para la sesión de la base de datos
@@ -861,30 +872,33 @@ def unitest_test_erase_figure_card():
     mock_db.add.return_value = None
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = None
-    
+
     # Crear una carta de figura para el test
     figure_card = MagicMock(spec=FigureCard)
-    figure_card.type_and_difficulty = FigTypeAndDifficulty.FIG_01  # Ajusta el valor según el tipo de carta
-    
+    # Ajusta el valor según el tipo de carta
+    figure_card.type_and_difficulty = FigTypeAndDifficulty.FIG_01
+
     # Crear mock para el jugador
     player = MagicMock(spec=Player)
     player.figure_cards = [figure_card]
-    
+
     # Crear un esquema de carta de figura
     figure_schema = MagicMock()
-    figure_schema.type_and_difficulty = FigTypeAndDifficulty.FIG_01  # Asegúrate de que coincida
-    
+    # Asegúrate de que coincida
+    figure_schema.type_and_difficulty = FigTypeAndDifficulty.FIG_01
+
     # Llamar a la función
     erase_figure_card(player, figure_schema, mock_db)
 
     # Verificar que la carta de figura fue eliminada de la lista de cartas del jugador
-    assert figure_card not in player.figure_cards  
-    
+    assert figure_card not in player.figure_cards
+
     # Verificar que la carta de figura fue eliminada de la base de datos
     mock_db.delete.assert_called_with(figure_card)
-    
+
     # Verificar que se haya hecho commit después de la eliminación
     mock_db.commit.assert_called_once()
+
 
 def unitest_test_has_figure_card():
     # Crear mock para la carta de figura
@@ -924,25 +938,27 @@ def unitest_test_has_figure_card():
     # Verificar que el resultado sea False, ya que el jugador no tiene la carta
     assert result is False
 
-def test_discard_figure_card():
+def test_discard_figure_card ():
     mock_db = MagicMock()
     mock_db.add.return_value = None
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = None
 
-    mock_figure_card = [FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True)]
-    
+    mock_figure_card = [FigureCard(
+        id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True)]
+
     mock_board = MagicMock()
     mock_board.color_distribution = [[Colors.red]]  # Use Colors.red directly
 
     mock_list_players = [
-            Player(id=1, name="Juan"),
-            Player(id=2, name="Pedro"),
-            Player(id=3, name="Maria", figure_cards=mock_figure_card)
-        ]
-    
-    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2, forbidden_color=Colors.none)
-    
+        Player(id=1, name="Juan"),
+        Player(id=2, name="Pedro"),
+        Player(id=3, name="Maria", figure_cards=mock_figure_card)
+    ]
+
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3,
+                     name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2, forbidden_color=Colors.none)
+
     mock_game.board = mock_board
 
     mock_db.merge.return_value = mock_list_players[2]
@@ -970,7 +986,8 @@ def test_discard_figure_card():
         mock_manager[mock_game.id].broadcast_game = AsyncMock(return_value=None)
         mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(return_value=None)
 
-        response = client.put("/games/1/figure/discard", json=ugly_figure_data.model_dump())
+        response = client.put("/games/1/figure/discard",
+                               json=ugly_figure_data.model_dump())
 
         assert response.status_code == 200
         assert response.json() == {"message": "Figure card discarded successfully"}
@@ -988,19 +1005,13 @@ def test_finish_turn_with_zero_mov_cards():
         mock_manager.__getitem__().broadcast_figures_in_board = AsyncMock()
         mock_manager.__getitem__().broadcast_game = AsyncMock()
 
-        mock_movement_cards = [
-            MovementCard(id=1, movement_type=MovementType.MOV_04,
-                         associated_player=3, in_hand=False),
-            MovementCard(id=2, movement_type=MovementType.MOV_05,
-                         associated_player=3, in_hand=False),
-            MovementCard(id=3, movement_type=MovementType.MOV_06,
-                         associated_player=3, in_hand=False),
-        ]
+        mock_movement_cards = []
 
         mock_list_players = [
             Player(id=1, name="Juan", blocked=False),
             Player(id=2, name="Pedro", blocked=False),
-            Player(id=3, name="Maria", movement_cards=mock_movement_cards, blocked=False)
+            Player(id=3, name="Maria",
+                   movement_cards=mock_movement_cards, blocked=False)
         ]
 
         # mocked game where it is Maria's turn (index 2)
@@ -1087,14 +1098,13 @@ def test_finish_turn_with_two_mov_cards():
                          associated_player=3, in_hand=True),
             MovementCard(id=2, movement_type=MovementType.MOV_02,
                          associated_player=3, in_hand=True),
-            MovementCard(id=3, movement_type=MovementType.MOV_03,
-                         associated_player=3, in_hand=False),
         ]
 
         mock_list_players = [
             Player(id=1, name="Juan", blocked=False),
             Player(id=2, name="Pedro", blocked=False),
-            Player(id=3, name="Maria", blocked=False, movement_cards=mock_movement_cards)
+            Player(id=3, name="Maria", blocked=False,
+                   movement_cards=mock_movement_cards)
         ]
 
         mock_movement_choices = [
@@ -1165,6 +1175,7 @@ def test_finish_turn_with_two_mov_cards():
 
     app.dependency_overrides = {}
 
+
 def test_finish_turn_with_one_fig_blocked():
     with patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager:
         mock_db = MagicMock()
@@ -1175,19 +1186,20 @@ def test_finish_turn_with_one_fig_blocked():
 
         mock_figure_cards = [
             FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_01,
-                        associated_player=3, in_hand=True, blocked=True),
+                       associated_player=3, in_hand=True, blocked=True),
             FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_02,
-                        associated_player=3, in_hand=True, blocked=False),
+                       associated_player=3, in_hand=True, blocked=False),
             FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_03,
-                        associated_player=3, in_hand=False, blocked=False),
+                       associated_player=3, in_hand=False, blocked=False),
             FigureCard(type_and_difficulty=FigTypeAndDifficulty.FIG_04,
-                        associated_player=3, in_hand=False, blocked=False),
+                       associated_player=3, in_hand=False, blocked=False),
         ]
 
         mock_list_players = [
             Player(id=1, name="Juan", blocked=False),
             Player(id=2, name="Pedro", blocked=False),
-            Player(id=3, name="Maria", figure_cards=mock_figure_cards, blocked=True)
+            Player(id=3, name="Maria",
+                   figure_cards=mock_figure_cards, blocked=True)
         ]
 
         mock_game = Game(id=1, players=mock_list_players, player_amount=3,
@@ -1196,58 +1208,79 @@ def test_finish_turn_with_one_fig_blocked():
         mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(
             return_value=None)
 
+        mock_movement_choices = [
+            MovementType.MOV_01,
+            MovementType.MOV_02,
+            MovementType.MOV_03,
+        ]
+
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
 
-        with patch('random.choice', side_effect=lambda x: x.pop(0)), \
+        random_choice_side_effect = [
+            mock_movement_choices[0],  # Para la primera llamada (movimiento)
+            mock_movement_choices[1],  # Para la segunda llamada (movimiento)
+            mock_movement_choices[2],  # Para la tercera llamada (movimiento)
+            mock_figure_cards[1],      # Para la primera llamada (figura)
+            mock_figure_cards[2],      # Para la segunda llamada (figura)
+        ]
+
+        with patch('random.choice', side_effect=random_choice_side_effect), \
                 patch('random.randint', return_value=2):
-                response = client.put("games/1/finish-turn")
+            response = client.put("games/1/finish-turn")
 
-                # We verify that figure cards are not dealt to María
-                expected_response = {
-                    "message": "Turno finalizado",
-                    "game": {
-                        "id": 1,
-                        "name": "Game 1",
-                        "status": "in game",
+            # Verificar que las cartas de figura no se distribuyan a María
+            expected_response = {
+                "message": "Turno finalizado",
+                "game": {
+                    "id": 1,
+                    "name": "Game 1",
+                    "status": "in game",
                         "forbidden_color": "none",
-                        "host_id": 1,
-                        "player_turn": 0,
-                        "player_amount": 3,
-                        "players": [
-                            {
-                                "id": 1,
-                                "name": "Juan",
-                                "movement_cards": [],
-                                "figure_cards": [],
-                                "blocked": False
-                            },
-                            {
-                                "id": 2,
-                                "name": "Pedro",
-                                "movement_cards": [],
-                                "figure_cards": [],
-                                "blocked": False
-                            },
-                            {
-                                "id": 3,
-                                "name": "Maria",
-                                "movement_cards": [],
-                                "figure_cards": [
-                                    {"type": ['fig01', 'difficult'],
-                                        "associated_player": 3, "blocked": True},
-                                    {"type": ['fig02', 'difficult'],
-                                        "associated_player": 3, "blocked": False},
-                                ],
-                                "blocked": True
-                            },
-                        ],
-                    }
+                    "host_id": 1,
+                    "player_turn": 0,
+                    "player_amount": 3,
+                    "players": [
+                        {
+                            "id": 1,
+                            "name": "Juan",
+                            "movement_cards": [],
+                            "figure_cards": [],
+                            "blocked": False
+                        },
+                        {
+                            "id": 2,
+                            "name": "Pedro",
+                            "movement_cards": [],
+                            "figure_cards": [],
+                            "blocked": False
+                        },
+                        {
+                            "id": 3,
+                            "name": "Maria",
+                            "movement_cards": [
+                                {"movement_type": "mov01",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "mov02",
+                                 "associated_player": 3, "in_hand": True},
+                                {"movement_type": "mov03",
+                                 "associated_player": 3, "in_hand": True},
+                            ],
+                            "figure_cards": [
+                                {"type": ['fig01', 'difficult'],
+                                    "associated_player": 3, "blocked": True},
+                                {"type": ['fig02', 'difficult'],
+                                    "associated_player": 3, "blocked": False},
+                            ],
+                            "blocked": True
+                        },
+                    ],
                 }
+            }
 
-                assert response.status_code == 200
-                assert response.json() == expected_response
+            assert response.status_code == 200
+            assert response.json() == expected_response
 
         app.dependency_overrides = {}
 

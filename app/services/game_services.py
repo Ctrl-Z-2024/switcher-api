@@ -14,6 +14,7 @@ from app.db.constants import AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
 from app.schemas.board_schemas import BoardSchemaOut
 from app.models.figure_card_model import FigureCard
+from app.schemas.figure_schema import FigTypeAndDifficulty, FigureInBoardSchema, FigureToDiscardSchema
 from app.schemas.figure_card_schema import FigureCardSchema
 
 
@@ -306,3 +307,20 @@ def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):
     player.figure_cards.remove(figure_card)
     db.delete(figure_card)
     db.commit()
+
+def get_real_FigType(ugly: str) -> (FigTypeAndDifficulty | None):
+    for fig in FigTypeAndDifficulty:
+        if fig.value[0] == ugly:
+            return fig
+    return None
+
+def get_real_card(player: Player, figure_to_discard: FigureToDiscardSchema, db: Session, game: Game):
+    real_type = get_real_FigType(figure_to_discard.figure_card)
+    if real_type:
+        return FigureCardSchema(type=real_type, associated_player=figure_to_discard.associated_player, blocked=False)
+
+
+def get_real_figure_in_board(figure_to_discard: FigureToDiscardSchema, game: Game):
+    real_type = get_real_FigType(ugly=figure_to_discard.figure_board)
+    if real_type:
+        return FigureInBoardSchema(fig=real_type, tiles=[])

@@ -5,7 +5,7 @@ from app.main import app
 from app.db.db import get_db
 from app.db.enums import GameStatus, MovementType, FigTypeAndDifficulty 
 from app.models.board_models import Board
-from app.schemas.figure_schema import FigureInBoardSchema, FigTypeAndDifficulty, Coordinate
+from app.schemas.figure_schema import FigureInBoardSchema, FigTypeAndDifficulty, Coordinate, FigureToDiscardSchema
 from app.schemas.figure_card_schema import FigureCardSchema
 from app.models.game_models import Game
 from app.models.figure_card_model import FigureCard
@@ -915,6 +915,55 @@ def unitest_test_has_figure_card():
 
     # Verificar que el resultado sea False, ya que el jugador no tiene la carta
     assert result is False
+
+def test_discard_figure_card ():
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+
+    mock_figure_card = [FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True)]
+    
+    mock_board = MagicMock()
+    mock_board.color_distribution = []
+
+    mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", figure_cards=mock_figure_card)
+        ]
+    
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+    
+    mock_game.board = mock_board
+
+    mock_db.merge.return_value = mock_list_players[2]
+    
+    ugly_figure_data = FigureToDiscardSchema(figure_card=FigTypeAndDifficulty.FIG_01.value[0], associated_player=3, figure_board=FigTypeAndDifficulty.FIG_01.value[0])
+    real_figure_in_board = FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[])
+    real_figure_card = FigureCardSchema(type=FigTypeAndDifficulty.FIG_01, associated_player=3, blocked=False)
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+    with patch('app.endpoints.game_endpoints.get_figure_in_board') as mock_get_figure_in_board, \
+         patch ('app.endpoints.game_endpoints.calculate_partial_board') as mock_calculate_partial_board, \
+        patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, \
+        patch("app.endpoints.game_endpoints.erase_figure_card") as mock_erase:
+        
+        mock_get_figure_in_board.return_value =[real_figure_in_board]
+        mock_calculate_partial_board.return_value = mock_board
+
+        mock_erase.return_value = None
+        mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+
+        response = client.put("/games/1/figure/discard",json=ugly_figure_data.model_dump())
+
+        assert response.status_code == 200
+        assert response.json() == {"message": "Figure card discarded successfully"}
+        mock_erase.assert_called_once_with(player=mock_list_players[2], figure=real_figure_card, db=mock_db)
 # ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 
 

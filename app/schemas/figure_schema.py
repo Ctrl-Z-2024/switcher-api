@@ -11,3 +11,11 @@ class FigureInBoardSchema(BaseModel):
         if isinstance(other, FigureInBoardSchema):
             return self.fig == other.fig and self.tiles == other.tiles
         return False
+    
+class FigureToDiscardSchema(BaseModel):
+
+    figure_card: str
+    associated_player: int
+
+    # tiles: List[Coordinate]
+    figure_board: str

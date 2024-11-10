@@ -1,7 +1,7 @@
 from app.schemas.game_schemas import GameSchemaIn, GameSchemaOut
 from app.schemas.figure_card_schema import FigureCardSchema
 from app.models.figure_card_model import FigureCard
-from app.schemas.figure_schema import FigureInBoardSchema
+from app.schemas.figure_schema import FigureInBoardSchema, FigureToDiscardSchema
 from app.schemas.movement_schema import MovementSchema
 from fastapi import APIRouter, HTTPException, Depends, status, Response
 from sqlalchemy.orm import Session
@@ -16,7 +16,8 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
                                         assign_next_turn, victory_conditions, initialize_figure_decks,
                                         deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
                                         has_partial_movement, remove_last_partial_movement, remove_all_partial_movements,
-                                        calculate_partial_board, has_figure_card, erase_figure_card)
+                                        calculate_partial_board, has_figure_card, erase_figure_card, get_real_card, get_real_FigType,
+                                        get_real_figure_in_board)
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
@@ -272,17 +273,20 @@ def get_games(
     return games
 
 @router.put("/{id_game}/figure/discard", summary="Discard a figure card")
-async def discard_figure_card (figure_card: FigureCardSchema, figure_in_board : FigureInBoardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
+async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
+
+    player_turn_obj: Player = game.players[game.player_turn]
+
+    figure_card = get_real_card(player=player_turn_obj, figure_to_discard=figure_to_discard, db=db, game=game)
+    figure_in_board = get_real_figure_in_board(figure_to_discard=figure_to_discard, game=game)
 
     #Verificar que la carta figura esta en la mano del jugador
-    player_turn_obj: Player = game.players[game.player_turn]
     
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder realizar un movimiento")
 
-    
-    if has_figure_card(figure_card, player_turn_obj) == False:
+    if not has_figure_card(figure_card_schema=figure_card, player=player_turn_obj):
       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
 
     figure_type = figure_card.type
@@ -308,7 +312,7 @@ async def discard_figure_card (figure_card: FigureCardSchema, figure_in_board : 
     #verificar color prohibido, todavia no imlpementado.
 
     #Registrar la carta figura en el descarte
-    erase_figure_card(player_turn_obj,figure_card, db)
+    erase_figure_card(player=player_turn_obj,figure=figure_card, db=db)
     asyncio.create_task(
     game_connection_managers[game.id].broadcast_game(game))
 

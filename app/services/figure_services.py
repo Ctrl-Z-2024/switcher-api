@@ -7,6 +7,7 @@ from typing import List
 from app.schemas.board_schemas import BoardSchemaOut
 from app.services.game_services import calculate_partial_board
 from app.schemas.figure_schema import FigureInBoardSchema
+import logging
 
 def is_figure_isolated(tiles:List[Coordinate], board:BoardSchemaOut) -> bool:
     """Check if a figure is isolated. i.e if the adyacent tiles don't share the same color"""
@@ -66,6 +67,7 @@ def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut)
     """
     Get all figures of a certain type in the board. If the list is empty, the figure is not in the board.
     """
+    logging.debug(f"Getting figure {figure_type}")
     figures = []
     possible_paths = VALID_PATHS[figure_type[0]]
     for path in possible_paths:
@@ -96,5 +98,4 @@ def get_all_figures_in_board(game: Game) -> List[FigureInBoardSchema]:
             all_figures.extend(fig_in_board)
 
     return all_figures
-
 

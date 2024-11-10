@@ -16,6 +16,7 @@ from app.schemas.board_schemas import BoardSchemaOut
 from app.models.figure_card_model import FigureCard
 from app.schemas.figure_schema import FigTypeAndDifficulty, FigureInBoardSchema, FigureToDiscardSchema
 from app.schemas.figure_card_schema import FigureCardSchema
+import logging
 
 
 def validate_game_capacity(game: Game):
@@ -289,18 +290,26 @@ def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
     Returns:
     - True si la carta figura está en la mano del jugador, False de lo contrario.
     """
-    return any(
-        card.type_and_difficulty == figure_card_schema.type and 
-        card.associated_player == figure_card_schema.associated_player
-        for card in player.figure_cards
-    )
+    logging.debug(f"Verifying if player has figure card {figure_card_schema}")
+    for card in player.figure_cards:
+        logging.debug(f"Comparing {card.associated_player} with {figure_card_schema.associated_player}")
+        logging.debug(f"Comparing {card.type_and_difficulty} with {figure_card_schema.type}")
+        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player:
+            return True
+    return False
+
+    # return any(
+    #     card.type_and_difficulty == figure_card_schema.type and 
+    #     card.associated_player == figure_card_schema.associated_player
+    #     for card in player.figure_cards
+    # )
 
 #Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
 #donde solo se hicieron unitest para esta funcion y no para el endpoint que la llama 
 #queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
 
 def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):    
-    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type_and_difficulty), None)
+    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type), None)
     if not figure_card:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Figure card not found in player's hand")
@@ -324,3 +333,7 @@ def get_real_figure_in_board(figure_to_discard: FigureToDiscardSchema, game: Gam
     real_type = get_real_FigType(ugly=figure_to_discard.figure_board)
     if real_type:
         return FigureInBoardSchema(fig=real_type, tiles=[])
+
+
+def serialize_board(board: BoardSchemaOut):
+    return [[color.value for color in row] for row in board.color_distribution]

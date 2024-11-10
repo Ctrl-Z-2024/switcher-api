@@ -17,12 +17,12 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
                                         deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
                                         has_partial_movement, remove_last_partial_movement, remove_all_partial_movements,
                                         calculate_partial_board, has_figure_card, erase_figure_card, get_real_card, get_real_FigType,
-                                        get_real_figure_in_board, serialize_board)
+                                        get_real_figure_in_board, serialize_board, )
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
 from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
                                             discard_movement_card, validate_movement,
-                                            make_partial_move, delete_movement_cards_not_in_hand)
+                                            make_partial_move, reassign_all_movement_cards, delete_movement_cards_not_in_hand)
 from app.services.figure_services import (get_figure_in_board)
 from app.endpoints.websocket_endpoints import game_connection_managers
 from app.services.auth_services import CustomHTTPBearer
@@ -169,6 +169,8 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder finalizarlo")
+    
+    reassign_all_movement_cards(player_turn_obj, db)
 
     deal_movement_cards_to_player(player_turn_obj, db)
 
@@ -289,13 +291,10 @@ async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder realizar un movimiento")
 
-    logging.debug(f"Figure card: {figure_card}")
     if not has_figure_card(figure_card_schema=figure_card, player=player_turn_obj):
       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
 
     figure_type = figure_card.type.value
-
-    logging.debug(f"FIGURE_TYPE!! -------- ASDA-DS-----ASD-AS-A-S-DA-SD-AS-A-: {figure_type}")
 
     #Verificar que la carta figura esta formada en el tablero
     

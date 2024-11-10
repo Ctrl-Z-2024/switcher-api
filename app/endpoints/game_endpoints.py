@@ -13,7 +13,7 @@ from app.dependencies.dependencies import get_game, get_player, check_name, get_
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
                                         validate_players_amount,  random_initial_turn, update_game_in_db,
-                                        assign_next_turn, is_single_player_victory, initialize_figure_decks,
+                                        assign_next_turn, is_single_player_victory, is_out_of_figure_cards_victory, initialize_figure_decks,
                                         deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
                                         has_partial_movement, remove_last_partial_movement, remove_all_partial_movements,
                                         calculate_partial_board, has_figure_card, erase_figure_card, get_real_card, get_real_FigType,
@@ -110,7 +110,7 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
 
     if is_single_player_victory(game):
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
-            game, game.players[0].name))
+            game, game.players[0]))
 
         end_game(game, db)
 
@@ -319,6 +319,10 @@ async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player:
     erase_figure_card(player=player_turn_obj,figure=figure_card, db=db)
     asyncio.create_task(
     game_connection_managers[game.id].broadcast_game(game))
+
+    if is_out_of_figure_cards_victory(game):
+        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
+            game, player_turn_obj))
 
     return {"message": "Figure card discarded successfully"}
 

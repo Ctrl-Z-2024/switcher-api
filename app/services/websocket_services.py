@@ -7,6 +7,7 @@ from app.dependencies.dependencies import get_game_list
 from app.services.game_services import convert_board_to_schema, calculate_partial_board
 from app.models.board_models import Board
 import logging
+from app.models.player_models import Player
 
 
 class ConnectionManager:
@@ -78,6 +79,7 @@ class GameManager:
     def disconnect(self, websocket: WebSocket):
         self.connection_manager.disconnect(websocket)
 
+
     async def broadcast_disconnection(self, game: Game, player_id: int, player_name: str):
         game_schema = convert_game_to_schema(game)
         event_message = {
@@ -86,6 +88,7 @@ class GameManager:
             "payload": game_schema
         }
         await self.connection_manager.broadcast(event_message)
+
 
     async def broadcast_connection(self, game: Game, player_id: int, player_name: str):
         game_schema = convert_game_to_schema(game)
@@ -96,12 +99,14 @@ class GameManager:
         }
         await self.connection_manager.broadcast(event_message)
 
+
     async def broadcast_game(self, game: Game):
         game_schema = convert_game_to_schema(game)
         event_message = {
             "payload": game_schema
         }
         await self.connection_manager.broadcast(event_message)
+
 
     async def broadcast_game_start(self, game: Game, player_name: str):
         game_schema = convert_game_to_schema(game)
@@ -112,6 +117,7 @@ class GameManager:
         }
         await self.connection_manager.broadcast(event_message)
 
+
     async def broadcast_finish_turn(self, game: Game, player_name: str):
         game_schema = convert_game_to_schema(game)
         event_message = {
@@ -121,13 +127,13 @@ class GameManager:
         }
 
         await self.connection_manager.broadcast(event_message)
-    
-    async def broadcast_game_won(self, game: Game, player_name: str):
-        game_schema = convert_game_to_schema(game)
+
+
+    async def broadcast_game_won(self, game: Game, player: Player):
         event_message = {
             "type": "game won",
-            "message": player_name + " ha ganado la partida",
-            "payload": game_schema
+            "message": player.name + " ha ganado la partida",
+            "payload": {"player_id": player.id}
         }
         await self.connection_manager.broadcast(event_message)
 
@@ -150,6 +156,7 @@ class GameManager:
             "payload": color_distribution
         }
         await self.connection_manager.broadcast(event_message)
+
 
     async def broadcast_figures_in_board(self, game:Game):
         figures = get_all_figures_in_board(game)

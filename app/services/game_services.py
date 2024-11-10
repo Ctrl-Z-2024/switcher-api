@@ -120,11 +120,17 @@ def assign_next_turn(game: Game):
     game.player_turn = (game.player_turn + 1) % game.player_amount
 
 
-def victory_conditions(game: Game) -> bool:
+def is_single_player_victory(game: Game) -> bool:
+    """ return true if there is only one player in the game """
     player_alone = game.status == GameStatus.in_game and game.player_amount == 1
 
     return player_alone
 
+def is_out_of_figure_cards(game: Game) -> bool:
+    """ return true if the actual player is out of figure cards """
+    actual_player: Player = game.players[game.player_turn]
+
+    return len([cards for cards in actual_player.figure_cards]) == 0
 
 def end_game(game: Game, db: Session):
     game.status = GameStatus.finished

@@ -14,7 +14,9 @@ from app.db.constants import AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
 from app.schemas.board_schemas import BoardSchemaOut
 from app.models.figure_card_model import FigureCard
+from app.schemas.figure_schema import FigTypeAndDifficulty, FigureInBoardSchema, FigureToDiscardSchema
 from app.schemas.figure_card_schema import FigureCardSchema
+import logging
 
 
 def validate_game_capacity(game: Game):
@@ -259,7 +261,6 @@ def calculate_partial_board(game: Game):
 
     player_partial_movs = [
         mov for mov in actual_player.movements if not mov.final_movement]
-    print("Movimientos parciales del jugador:", player_partial_movs)
     player_partial_movs = sorted(player_partial_movs, key=lambda mov: mov.id)
 
     for mov in player_partial_movs:
@@ -283,3 +284,59 @@ def verify_discard_blocked_card_condition(player: Player, figure_card: FigureCar
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No puedes descartar una carta bloqueada si tienes otras cartas en mano."
         )
+
+def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
+    """
+    Verifica si el jugador tiene la carta de figura en mano comparando con el esquema dado.
+    
+    Args:
+    - player: El jugador que se está verificando.
+    - figure_card_schema: El esquema de la carta de figura a comparar.
+    
+    Returns:
+    - True si la carta figura está en la mano del jugador, False de lo contrario.
+    """
+    for card in player.figure_cards:
+        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player:
+            return True
+    return False
+
+    # return any(
+    #     card.type_and_difficulty == figure_card_schema.type and 
+    #     card.associated_player == figure_card_schema.associated_player
+    #     for card in player.figure_cards
+    # )
+
+#Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
+#donde solo se hicieron unitest para esta funcion y no para el endpoint que la llama 
+#queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
+
+def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):    
+    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None)
+    if not figure_card:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Figure card not found in player's hand")
+    player.figure_cards.remove(figure_card)
+    db.delete(figure_card)
+    db.commit()
+
+def get_real_FigType(ugly: str) -> (FigTypeAndDifficulty | None):
+    for fig in FigTypeAndDifficulty:
+        if fig.value[0] == ugly:
+            return fig
+    return None
+
+def get_real_card(player: Player, figure_to_discard: FigureToDiscardSchema, db: Session, game: Game):
+    real_type = get_real_FigType(figure_to_discard.figure_card)
+    if real_type:
+        return FigureCardSchema(type=real_type, associated_player=figure_to_discard.associated_player, blocked=False)
+
+
+def get_real_figure_in_board(figure_to_discard: FigureToDiscardSchema, game: Game):
+    real_type = get_real_FigType(ugly=figure_to_discard.figure_board)
+    if real_type:
+        return FigureInBoardSchema(fig=real_type, tiles=[])
+
+
+def serialize_board(board: BoardSchemaOut):
+    return [[color.value for color in row] for row in board.color_distribution]

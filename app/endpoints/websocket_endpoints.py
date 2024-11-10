@@ -23,20 +23,17 @@ def start_event_loop(loop: AbstractEventLoop):
 def get_or_create_event_loop():
     try:
         loop = asyncio.get_running_loop()
-        # logging.debug(f"Is the event loop that I got running? {loop.is_running()}")
         return loop
     except RuntimeError:
         loop = asyncio.new_event_loop()
         threading.Thread(target=start_event_loop,
                          args=(loop,), daemon=True).start()
-        # logging.debug(f"Is the event loop that I created running? {loop.is_running()}")
         return loop
 
 
 @event.listens_for(Game, 'after_insert')
 def handle_creation(mapper, connection, target: Game):
     loop = get_or_create_event_loop()
-    logging.debug(f"About to broadcast game added: {target}")
     asyncio.run_coroutine_threadsafe(
         game_list_manager.broadcast_game("game added", target), loop)
 
@@ -44,7 +41,6 @@ def handle_creation(mapper, connection, target: Game):
 @event.listens_for(Game, 'after_delete')
 def handle_deletion(mapper, connection, target: Game):
     loop = get_or_create_event_loop()
-    logging.debug(f"About to broadcast game deleted: {target}")
     asyncio.run_coroutine_threadsafe(
         game_list_manager.broadcast_game("game deleted", target), loop)
 
@@ -52,7 +48,6 @@ def handle_deletion(mapper, connection, target: Game):
 @event.listens_for(Game, 'after_update')
 def handle_change(mapper, connection, target: Game):
     loop = get_or_create_event_loop()
-    logging.debug(f"About to broadcast game updated: {target}")
     asyncio.run_coroutine_threadsafe(
         game_list_manager.broadcast_game("game updated", target), loop)
 

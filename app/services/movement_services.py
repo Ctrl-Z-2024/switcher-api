@@ -101,6 +101,13 @@ def reassign_movement_card(movement: Movement, player: Player, db: Session):
     db.commit()
     db.refresh(m_player)
 
+def reassign_all_movement_cards(player: Player, db: Session):
+    partial_movements = [
+    movement for movement in player.movements if not movement.final_movement]
+
+    for mov in partial_movements:
+        reassign_movement_card(mov, player, db)
+    
 
 def make_partial_move(movement: MovementSchema, player: Player, db: Session):
     partial_move = Movement(movement_type=movement.movement_card.movement_type,
@@ -111,3 +118,11 @@ def make_partial_move(movement: MovementSchema, player: Player, db: Session):
     db.add(partial_move)
     db.commit()
     db.refresh(partial_move)
+
+
+def delete_movement_cards_not_in_hand (player: Player, db: Session):
+    for movement_card in player.movement_cards:
+        if not movement_card.in_hand:
+            db.delete(movement_card)
+    db.commit()
+    db.refresh(player)

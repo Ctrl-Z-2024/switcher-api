@@ -20,7 +20,7 @@ from app.services.game_services import (search_player_in_game, is_player_host, r
                                         get_real_figure_in_board, serialize_board, )
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
-from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards_to_player,
+from app.services.movement_services import (deal_initial_movement_cards, deal_movement_cards,
                                             discard_movement_card, validate_movement,
                                             make_partial_move, reassign_all_movement_cards, delete_movement_cards_not_in_hand)
 from app.services.figure_services import (get_figure_in_board)
@@ -160,6 +160,7 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
 @router.put("/{id_game}/finish-turn", summary="Finish a turn")
 async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depends(get_game), db: Session = Depends(get_db)):
+    logging.debug(f"GAME STATUS =========  {game.status} AANASHE")
     if game.status is not GameStatus.in_game:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="El juego debe estar comenzado")
@@ -172,7 +173,7 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     
     reassign_all_movement_cards(player_turn_obj, db)
 
-    deal_movement_cards_to_player(player_turn_obj, db)
+    deal_movement_cards(player_turn_obj, db)
 
     deal_figure_cards_to_player(player_turn_obj, db)
 
@@ -277,7 +278,7 @@ def get_games(
     return games
 
 @router.put("/{id_game}/figure/discard", summary="Discard a figure card")
-async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
+async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
 
     player_turn_obj: Player = game.players[game.player_turn]
     board = calculate_partial_board(game)
@@ -308,7 +309,7 @@ async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player:
         game_connection_managers[game.id].broadcast_board(game))
     
     #Setear movimientos como finales
-    for movement in player.movements:
+    for movement in player_turn_obj.movements:
         movement.final_movement = True
         
     delete_movement_cards_not_in_hand(player_turn_obj, db)

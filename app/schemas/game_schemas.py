@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from app.db.enums import GameStatus
+from app.db.enums import (GameStatus, Colors)
 from typing import List
 from app.schemas.player_schemas import PlayerGameSchemaOut
 from typing_extensions import Annotated
@@ -25,6 +25,7 @@ class GameSchemaOut(BaseModel):
     host_id: int
     player_turn: int
     players: List[PlayerGameSchemaOut] = []
+    forbidden_color: Colors
 
     class ConfigDict:
         from_attributes = True

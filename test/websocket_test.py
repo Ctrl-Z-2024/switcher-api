@@ -34,6 +34,7 @@ def mock_game():
     game.player_amount = 3
     game.host_id = 1
     game.player_turn = 0
+    game.forbidden_color = Colors.none.value
     game.players = []
     game.status = GameStatus.waiting.value
     return game
@@ -314,7 +315,8 @@ def test_victory_when_player_is_alone():
         ]
 
         mock_game = Game(id=1, name="gametest", player_amount=2, status=GameStatus.in_game,
-                         host_id=2, player_turn=1, players=mock_list_players)
+                         host_id=2, player_turn=1, players=mock_list_players,
+                         forbidden_color=Colors.none)
         mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(
             return_value=None)
         mock_manager[mock_game.id].broadcast_game_won = AsyncMock(
@@ -348,6 +350,7 @@ def test_victory_when_player_is_alone():
                 "player_amount": 0,
                 "status": "finished",  # El estado debe ser 'finished' cuando alguien gana
                 "host_id": 2,
+                "forbidden_color": "none",
                 "player_turn": 1,
                 # Solo Pedro queda en el juego, y ha ganado
                 "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": [], "blocked":False}],
@@ -375,7 +378,7 @@ def test_no_victory_when_multiple_players_remain():
         ]
 
         mock_game = Game(id=1, name="gametest", player_amount=3, status=GameStatus.in_game,
-                         host_id=2, player_turn=1, players=mock_list_players)
+                         host_id=2, player_turn=1, players=mock_list_players, forbidden_color=Colors.none)
 
         mock_manager[mock_game.id].broadcast_disconnection = AsyncMock(
             return_value=None)
@@ -410,6 +413,7 @@ def test_no_victory_when_multiple_players_remain():
                 "status": "in game",  # El estado sigue siendo 'in game'
                 "host_id": 2,
                 "player_turn": 1,
+                "forbidden_color": "none",
                 # Pedro y Maria quedan en el juego
                 "players": [
                     {"id": 2, "name": "Pedro",

@@ -6,7 +6,7 @@ from app.schemas.movement_schema import MovementSchema
 from fastapi import APIRouter, HTTPException, Depends, status, Response
 from sqlalchemy.orm import Session
 from app.db.db import get_db
-from app.db.enums import GameStatus
+from app.db.enums import GameStatus, Colors
 from app.models.game_models import Game
 from app.models.player_models import Player
 from app.dependencies.dependencies import get_game, get_player, check_name, get_game_status
@@ -47,6 +47,7 @@ async def create_game(game: GameSchemaIn, player: Player = Depends(auth_scheme),
         name=game.name,
         player_amount=game.player_amount,
         host_id=player.id,
+        forbidden_color=Colors.none
     )
 
     m_player = db.merge(player)
@@ -286,11 +287,17 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
     figure_card = get_real_card(player=player_turn_obj, figure_to_discard=figure_to_discard, db=db, game=game)
     figure_in_board = get_real_figure_in_board(figure_to_discard=figure_to_discard, game=game)
 
+    figure_color = board.color_distribution[figure_to_discard.clicked_x][figure_to_discard.clicked_y]
+
     #Verificar que la carta figura esta en la mano del jugador
     
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder realizar un movimiento")
+
+    if figure_color == game.forbidden_color:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail="El color de la figura no puede ser el color prohibido")
 
     if not has_figure_card(figure_card_schema=figure_card, player=player_turn_obj):
       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
@@ -299,11 +306,14 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
 
     #Verificar que la carta figura esta formada en el tablero
     
-    if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type)]:
+    if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type, f_color=game.forbidden_color)]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta formada en el tablero")
     
     #Actualizar el tablero en la bd
     game.board.color_distribution = serialize_board(board)
+
+    #Actualizar el color prohibido
+    game.forbidden_color = figure_color
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_board(game))
@@ -314,12 +324,15 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
         
     delete_movement_cards_not_in_hand(player_turn_obj, db)
 
-    #verificar color prohibido, todavia no imlpementado.
-
     #Registrar la carta figura en el descarte
     erase_figure_card(player=player_turn_obj,figure=figure_card, db=db)
     asyncio.create_task(
     game_connection_managers[game.id].broadcast_game(game))
+
+    #El color prohibido ha cambiado: reenviar todas las figuras formadas en el tablero.
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_figures_in_board(game)
+    )
 
     return {"message": "Figure card discarded successfully"}
 

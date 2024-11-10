@@ -31,6 +31,7 @@ def mock_game_1():
     game.player_amount = 2
     game.host_id = 1
     game.player_turn = 1
+    game.forbidden_color = Colors.none
     game.players = mock_list_players
 
     return game
@@ -57,6 +58,7 @@ def mock_game_2():
     game.player_amount = 2
     game.host_id = 1
     game.player_turn = 1
+    game.forbidden_color = Colors.none
     game.players = mock_list_players
 
     return game
@@ -80,6 +82,7 @@ def mock_game_3():
     game.player_amount = 2
     game.host_id = 1
     game.player_turn = 1
+    game.forbidden_color = Colors.none
     game.players = mock_list_players
 
     return game
@@ -268,4 +271,38 @@ def test_get_figures_in_board_none(mock_game_1):
         mock_calculate_partial_board.return_value = mock_board
         response = get_all_figures_in_board(mock_game_1)
         expected_response = []
+        assert response == expected_response
+
+
+def test_get_figures_in_board_fc(mock_game_3):
+    """
+    Mass test for fige1-fige7, but with the forbidden color red. The function should ignore the red figures.
+    """
+    mock_board = MagicMock(spec=Board)
+    mock_game_3.forbidden_color = Colors.red
+    mock_board.color_distribution = [[Colors.green, Colors.red, Colors.red, Colors.blue, Colors.green, Colors.yellow],
+                  [Colors.green, Colors.red, Colors.red, Colors.blue, Colors.green, Colors.yellow],
+                  [Colors.green, Colors.yellow, Colors.yellow, Colors.green, Colors.green, Colors.yellow],
+                  [Colors.green, Colors.blue, Colors.yellow, Colors.yellow, Colors.red, Colors.red],
+                  [Colors.blue, Colors.blue, Colors.blue, Colors.green, Colors.green, Colors.red],
+                  [Colors.red, Colors.yellow, Colors.green, Colors.green, Colors.blue, Colors.red]]
+
+    mock_game_3.board = mock_board
+    with patch('app.services.figure_services.calculate_partial_board') as mock_calculate_partial_board:
+        mock_calculate_partial_board.return_value = mock_board
+        response = get_all_figures_in_board(mock_game_3)
+
+        expected_response = [
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_01, tiles=[Coordinate(x=5, y=3), Coordinate(x=4, y=3), Coordinate(x=4, y=4), Coordinate(x=5, y=2)]),        
+        # FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_02, tiles=[Coordinate(x=0, y=1), Coordinate(x=0, y=2), Coordinate(x=1, y=2), Coordinate(x=1, y=1)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_03, tiles=[Coordinate(x=3, y=2), Coordinate(x=3, y=3), Coordinate(x=2, y=1), Coordinate(x=2, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_04, tiles=[Coordinate(x=3, y=1), Coordinate(x=4, y=0), Coordinate(x=4, y=1), Coordinate(x=4, y=2)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_05, tiles=[Coordinate(x=2, y=3), Coordinate(x=2, y=4), Coordinate(x=0, y=4), Coordinate(x=1, y=4)]),
+        FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_06, tiles=[Coordinate(x=1, y=0), Coordinate(x=2, y=0), Coordinate(x=3, y=0), Coordinate(x=0, y=0)]),
+        # FigureInBoardSchema(fig=FigTypeAndDifficulty.FIGE_07, tiles=[Coordinate(x=4, y=5), Coordinate(x=5, y=5), Coordinate(x=3, y=4), Coordinate(x=3, y=5)]),
+        ]
+
+        response = convert_tiles_to_set(response)
+        expected_response = convert_tiles_to_set(expected_response)
+
         assert response == expected_response

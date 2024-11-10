@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.db import Base
-from app.db.enums import GameStatus
+from app.db.enums import (GameStatus, Colors)
 from app.models.player_models import Player
 from app.models.figure_card_model import FigureCard
 
@@ -26,3 +26,5 @@ class Game(Base):
     
     # #Relacion one-to-one entre game y borad
     board = relationship ("Board", back_populates="game", uselist=False)
+
+    forbidden_color = Column(Enum(Colors), default=Colors.none)

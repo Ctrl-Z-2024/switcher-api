@@ -293,13 +293,13 @@ async def discard_figure_card (figure_to_discard: FigureToDiscardSchema, player:
     if not has_figure_card(figure_card_schema=figure_card, player=player_turn_obj):
       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
 
-    figure_type = figure_card.type
+    figure_type = figure_card.type.value
 
-    logging.debug(f"Figure type: {figure_type}")
+    logging.debug(f"FIGURE_TYPE!! -------- ASDA-DS-----ASD-AS-A-S-DA-SD-AS-A-: {figure_type}")
 
     #Verificar que la carta figura esta formada en el tablero
-
-    if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type.value)]:
+    
+    if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type)]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta formada en el tablero")
     
     #Actualizar el tablero en la bd

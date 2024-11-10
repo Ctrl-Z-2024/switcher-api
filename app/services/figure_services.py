@@ -38,17 +38,16 @@ def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate)
     valid_path = []
     for mov in path:
         next_tile = None
-        if mov in (Movement.UP, Movement.TUP) and current_tile.y > 0:
+        if mov in (Movement.UP, Movement.TUP) and current_tile.x > 0:
+            next_tile = Coordinate(x=current_tile.x-1, y=current_tile.y)
+        elif mov in (Movement.DOWN, Movement.TDOWN) and current_tile.x < len(actual_board[0]) - 1:
+            next_tile = Coordinate(x=current_tile.x+1, y=current_tile.y)
+        elif mov in (Movement.LEFT, Movement.TLEFT) and current_tile.y > 0:
             next_tile = Coordinate(x=current_tile.x, y=current_tile.y - 1)
-        elif mov in (Movement.DOWN, Movement.TDOWN) and current_tile.y < len(actual_board[0]) - 1:
+        elif mov in (Movement.RIGHT, Movement.TRIGHT) and current_tile.y < len(actual_board) - 1:
             next_tile = Coordinate(x=current_tile.x, y=current_tile.y + 1)
-        elif mov in (Movement.LEFT, Movement.TLEFT) and current_tile.x > 0:
-            next_tile = Coordinate(x=current_tile.x - 1, y=current_tile.y)
-        elif mov in (Movement.RIGHT, Movement.TRIGHT) and current_tile.x < len(actual_board) - 1:
-            next_tile = Coordinate(x=current_tile.x + 1, y=current_tile.y)
         else:
             return []
-    
         if actual_board[next_tile.x][next_tile.y] == actual_board[current_tile.x][current_tile.y]:
             #For tmoves, append the tile that's outside the path and continue traveling with the previous tile.
             #This assures that each tile is only appended once.
@@ -63,11 +62,10 @@ def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate)
     return valid_path
 
 
-def get_figure_in_board(figure_type:FigTypeAndDifficulty, board: BoardSchemaOut) -> List[FigureInBoardSchema]:
+def get_figure_in_board(figure_type:tuple, board: BoardSchemaOut) -> List[FigureInBoardSchema]:
     """
     Get all figures of a certain type in the board. If the list is empty, the figure is not in the board.
     """
-    logging.debug(f"Getting figure {figure_type}")
     figures = []
     possible_paths = VALID_PATHS[figure_type[0]]
     for path in possible_paths:

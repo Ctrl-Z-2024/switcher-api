@@ -290,10 +290,7 @@ def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
     Returns:
     - True si la carta figura está en la mano del jugador, False de lo contrario.
     """
-    logging.debug(f"Verifying if player has figure card {figure_card_schema}")
     for card in player.figure_cards:
-        logging.debug(f"Comparing {card.associated_player} with {figure_card_schema.associated_player}")
-        logging.debug(f"Comparing {card.type_and_difficulty} with {figure_card_schema.type}")
         if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player:
             return True
     return False
@@ -309,7 +306,7 @@ def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
 #queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
 
 def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):    
-    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type), None)
+    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None)
     if not figure_card:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Figure card not found in player's hand")

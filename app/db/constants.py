@@ -233,7 +233,7 @@ FIG14_3 = [Movement.DOWN, Movement.TLEFT, Movement.DOWN, Movement.DOWN]
 
 FIG15_0 = [Movement.RIGHT, Movement.UP, Movement.RIGHT, Movement.DOWN]
 FIG15_1 = [Movement.DOWN, Movement.RIGHT, Movement.DOWN, Movement.LEFT]
-FIG15_2 = [Movement.DOWN, Movement.LEFT, Movement.UP, Movement.RIGHT]
+FIG15_2 = [Movement.DOWN, Movement.RIGHT, Movement.UP, Movement.RIGHT]
 FIG15_3 = [Movement.UP, Movement.UP, Movement.LEFT, Movement.DOWN]
 
 FIG16_0 = [Movement.DOWN, Movement.RIGHT, Movement.RIGHT, Movement.UP]

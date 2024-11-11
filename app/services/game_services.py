@@ -316,6 +316,7 @@ def has_figure_card(player: Player, figure_card_schema: FigureCardSchema) -> boo
 
 
 def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):
+
     figure_card = next(
         (card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None)
     if not figure_card:
@@ -323,7 +324,6 @@ def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):
                             detail="Figure card not found in player's hand")
     player.figure_cards.remove(figure_card)
     db.delete(figure_card)
-    db.commit()
 
 
 def get_real_FigType(ugly: str) -> (FigTypeAndDifficulty | None):
@@ -363,6 +363,18 @@ def block_player(figure: FigureCardSchema, player: Player, db: Session):
     figure_card = next((card for card in m_player.figure_cards if card.type_and_difficulty ==
                        figure.type and card.in_hand), None)  # ojo aca
     figure_card.blocked = True
+
+    db.commit()
+    db.refresh(m_player)
+
+
+def unlock_remaining_card(player: Player, db: Session):
+    m_player = db.merge(player)
+
+    if m_player.blocked:
+        figure_card = next(
+            (card for card in m_player.figure_cards if card.in_hand), None)  # ojo aca
+        figure_card.blocked = False
 
     db.commit()
     db.refresh(m_player)

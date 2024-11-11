@@ -334,6 +334,14 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
 
     # Registrar la carta figura en el descarte
     erase_figure_card(player=player_turn_obj, figure=figure_card, db=db)
+    
+    if len(player_turn_obj.figure_cards) == 1 and player_turn_obj.figure_cards[0].blocked:
+        card_to_unlock = player_turn_obj.figure_cards[0]
+        card_to_unlock.blocked = True
+        
+    if player_turn_obj.blocked and not len(player_turn_obj.figure_cards):
+        player_turn_obj.blocked = False
+    
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
 
@@ -345,9 +353,9 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
+    
+    print(player_turn_obj.figure_cards)
 
-    # Should always set player.blocked to True
-    player_turn_obj.blocked = True
     db.commit()
     db.refresh(player_turn_obj)
 

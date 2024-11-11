@@ -348,17 +348,20 @@ def get_real_figure_in_board(figure_to_discard: FigureToDiscardSchema, game: Gam
 def serialize_board(board: BoardSchemaOut):
     return [[color.value for color in row] for row in board.color_distribution]
 
-def get_player_by_id (id : int, game: Game):
+
+def get_player_by_id(id: int, game: Game):
     for player in game.players:
         if player.id == id:
             return player
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail="El jugador no esta en la partida")
 
+
 def block_player(figure: FigureCardSchema, player: Player, db: Session):
     m_player = db.merge(player)
     m_player.blocked = True
-    figure_card = next((card for card in m_player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None) #ojo aca
+    figure_card = next((card for card in m_player.figure_cards if card.type_and_difficulty ==
+                       figure.type and card.in_hand), None)  # ojo aca
     figure_card.blocked = True
 
     db.commit()

@@ -140,7 +140,10 @@ def end_game(game: Game, db: Session):
 
     for player in game.players:
         player.game_id = None
+        player.blocked = False
         clear_all_cards(player, db)
+        
+    db.delete(game)
 
 
 def convert_board_to_schema(game: Game):

@@ -13,11 +13,11 @@ from app.models.player_models import Player
 from app.dependencies.dependencies import get_game, get_player, check_name, get_game_status
 from app.services.game_services import (search_player_in_game, is_player_host, remove_player_from_game,
                                         convert_game_to_schema, validate_game_capacity, add_player_to_game,
-                                        validate_players_amount,  random_initial_turn, update_game_in_db,
+                                        validate_players_amount,  random_initial_turn,
                                         assign_next_turn, is_single_player_victory, is_out_of_figure_cards_victory, initialize_figure_decks,
-                                        deal_figure_cards_to_player, clear_all_cards, end_game, is_player_in_turn,
+                                        deal_figure_cards_to_player, clear_all_cards, end_game,
                                         has_partial_movement, remove_last_partial_movement, remove_all_partial_movements,
-                                        calculate_partial_board, has_figure_card, erase_figure_card, get_real_card, get_real_FigType,
+                                        calculate_partial_board, has_figure_card, erase_figure_card, get_real_card,
                                         get_real_figure_in_board, serialize_board, get_player_by_id, block_player, unlock_remaining_card)
 from app.models.board_models import Board
 from app.dependencies.dependencies import get_game, check_name, get_game_status
@@ -119,7 +119,6 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
         end_game(game, db)
 
         db.commit()
-        db.refresh(game)
         db.refresh(player)
 
     return {"message": f"{player.name} abandono la partida", "game": convert_game_to_schema(game)}
@@ -361,6 +360,11 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
+    
+    end_game(game, db)
+    
+    db.commit()
+    db.refresh(player)
 
     return {"message": "Carta figura descartada con exito"}
 

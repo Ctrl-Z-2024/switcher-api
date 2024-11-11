@@ -16,15 +16,15 @@ class Player(Base):
     blocked = Column(Boolean, default=False)
 
     #relation many-to-one between player and game
-    game_id = Column(Integer, ForeignKey("game.id"), nullable = True, default = None)
+    game_id = Column(Integer, ForeignKey("game.id", ondelete="SET NULL"), nullable = True, default = None)
     game = relationship("Game", back_populates="players", foreign_keys=[game_id], primaryjoin="Player.game_id == Game.id")
 
     movement_cards = relationship("MovementCard", back_populates="player", foreign_keys=[MovementCard.associated_player], 
-                                  primaryjoin="Player.id == MovementCard.associated_player")
+                                  primaryjoin="Player.id == MovementCard.associated_player", cascade="all, delete-orphan")
     
     figure_cards = relationship("FigureCard", back_populates="player", foreign_keys=[FigureCard.associated_player], 
-                                primaryjoin="Player.id == FigureCard.associated_player")
+                                primaryjoin="Player.id == FigureCard.associated_player", cascade="all, delete-orphan")
     
     movements = relationship("Movement", back_populates="player", foreign_keys=[Movement.player_id],
-                            primaryjoin="Player.id == Movement.player_id")
+                            primaryjoin="Player.id == Movement.player_id", cascade="all, delete-orphan")
     

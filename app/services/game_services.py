@@ -303,11 +303,19 @@ def has_figure_card(player: Player, figure_card_schema: FigureCardSchema) -> boo
     Returns:
     - True si la carta figura está en la mano del jugador, False de lo contrario.
     """
-    for card in player.figure_cards:
-        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player and card.in_hand:
-            verify_discard_blocked_card_condition(player, card)
-            return True
-    return False
+    filtered_cards = [card for card in player.figure_cards if card.in_hand and card.type_and_difficulty ==
+                      figure_card_schema.type and card.associated_player == figure_card_schema.associated_player]
+
+    if not filtered_cards:
+        return False
+
+    if len(filtered_cards) > 1:
+        return True
+
+    for card in filtered_cards:
+        verify_discard_blocked_card_condition(player, card)
+
+    return True
 
 
 # Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
@@ -316,9 +324,12 @@ def has_figure_card(player: Player, figure_card_schema: FigureCardSchema) -> boo
 
 
 def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):
-
     figure_card = next(
-        (card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None)
+        (
+            card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand and not card.blocked),
+        None
+    )
+
     if not figure_card:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Figure card not found in player's hand")

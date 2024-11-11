@@ -330,6 +330,7 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
         movement.final_movement = True
 
     delete_movement_cards_not_in_hand(player_turn_obj, db)
+    
     # Registrar la carta figura en el descarte
     erase_figure_card(player=player_turn_obj, figure=figure_card, db=db)
 

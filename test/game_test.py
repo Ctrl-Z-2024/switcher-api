@@ -944,9 +944,11 @@ def test_discard_figure_card ():
     mock_db.commit.return_value = None
     mock_db.refresh.return_value = None
 
-    mock_figure_card = [FigureCard(
-        id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True)]
-
+    mock_figure_card = [
+        FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True),
+        FigureCard(id=2, type_and_difficulty=FigTypeAndDifficulty.FIG_02, associated_player=3, in_hand=True)
+        ]
+    
     mock_board = MagicMock()
     mock_board.color_distribution = [[Colors.red]]  # Use Colors.red directly
 
@@ -982,19 +984,127 @@ def test_discard_figure_card ():
         mock_serialize_board.return_value = [["red"]]  # Mock the serialized board
 
         mock_erase.return_value = None
-        mock_manager[mock_game.id].broadcast_board = AsyncMock(return_value=None)
-        mock_manager[mock_game.id].broadcast_game = AsyncMock(return_value=None)
-        mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game_won = AsyncMock(return_value=None)
+        mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(return_value=None)    
 
         response = client.put("/games/1/figure/discard",
                                json=ugly_figure_data.model_dump())
 
         assert response.status_code == 200
         assert response.json() == {"message": "Figure card discarded successfully"}
-        
-        # Test to see if the forbidden color changes correctly.
+        mock_erase.assert_called_once_with(player=mock_list_players[2], figure=real_figure_card, db=mock_db)
+        mock_manager[mock_game.id].broadcast_game_won.assert_not_called()
         assert mock_game.forbidden_color == Colors.red
-        mock_erase.assert_called_once_with(player=mock_list_players[2], figure=real_figure_card, db=mock_db)# ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
+        mock_erase.assert_called_once_with(player=mock_list_players[2], figure=real_figure_card, db=mock_db)
+
+def test_discard_figure_card_victory ():
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+
+    mock_figure_card = [FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True)]
+    
+    mock_board = MagicMock()
+    mock_board.color_distribution = [[Colors.red]] 
+
+    mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", figure_cards=mock_figure_card)
+        ]
+    
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+    
+    mock_game.board = mock_board
+
+    mock_db.merge.return_value = mock_list_players[2]
+    
+    ugly_figure_data = FigureToDiscardSchema(figure_card=FigTypeAndDifficulty.FIG_01.value[0], associated_player=3, figure_board=FigTypeAndDifficulty.FIG_01.value[0], clicked_x=0, clicked_y=0)
+    real_figure_in_board = FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[])
+    real_figure_card = FigureCardSchema(type=FigTypeAndDifficulty.FIG_01, associated_player=3, blocked=False)
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+    with patch('app.endpoints.game_endpoints.get_figure_in_board') as mock_get_figure_in_board, \
+         patch ('app.endpoints.game_endpoints.calculate_partial_board') as mock_calculate_partial_board, \
+        patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, \
+        patch("app.endpoints.game_endpoints.erase_figure_card") as mock_erase:
+        
+        mock_get_figure_in_board.return_value =[real_figure_in_board]
+        mock_calculate_partial_board.return_value = mock_board
+
+        def side_effect(player, figure, db):
+            player.figure_cards = [card for card in player.figure_cards if card.type_and_difficulty != figure.type]
+
+        mock_erase.return_value = None
+        mock_erase.side_effect = side_effect
+        mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game_won = AsyncMock(return_value=None)
+        mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(return_value=None)
+
+        response = client.put("/games/1/figure/discard",json=ugly_figure_data.model_dump())
+
+        assert response.status_code == 200
+        assert response.json() == {"message": "Figure card discarded successfully"}
+        mock_erase.assert_called_once_with(player=mock_list_players[2], figure=real_figure_card, db=mock_db)
+        mock_manager[mock_game.id].broadcast_game_won.assert_called_once()
+
+def test_discard_figure_card_blocked ():
+    mock_db = MagicMock()
+    mock_db.add.return_value = None
+    mock_db.commit.return_value = None
+    mock_db.refresh.return_value = None
+
+    mock_figure_card = [FigureCard(id=1, type_and_difficulty=FigTypeAndDifficulty.FIG_01, associated_player=3, in_hand=True, blocked=True)]
+    
+    mock_board = MagicMock()
+    mock_board.color_distribution = [[Colors.red]] 
+
+    mock_list_players = [
+            Player(id=1, name="Juan"),
+            Player(id=2, name="Pedro"),
+            Player(id=3, name="Maria", figure_cards=mock_figure_card)
+        ]
+    
+    mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
+    
+    mock_game.board = mock_board
+
+    mock_db.merge.return_value = mock_list_players[2]
+    
+    ugly_figure_data = FigureToDiscardSchema(figure_card=FigTypeAndDifficulty.FIG_01.value[0], associated_player=3, figure_board=FigTypeAndDifficulty.FIG_01.value[0], clicked_x=0, clicked_y=0)
+    real_figure_in_board = FigureInBoardSchema(fig=FigTypeAndDifficulty.FIG_01, tiles=[])
+    real_figure_card = FigureCardSchema(type=FigTypeAndDifficulty.FIG_01, associated_player=3, blocked=True)
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_game] = lambda: mock_game
+    app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
+    with patch('app.endpoints.game_endpoints.get_figure_in_board') as mock_get_figure_in_board, \
+         patch ('app.endpoints.game_endpoints.calculate_partial_board') as mock_calculate_partial_board, \
+        patch("app.endpoints.game_endpoints.game_connection_managers") as mock_manager, \
+        patch("app.endpoints.game_endpoints.erase_figure_card") as mock_erase:
+        
+        mock_get_figure_in_board.return_value =[real_figure_in_board]
+        mock_calculate_partial_board.return_value = mock_board
+
+        mock_erase.return_value = None
+        mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+
+        response = client.put("/games/1/figure/discard",json=ugly_figure_data.model_dump())
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "No puedes descartar una carta bloqueada."}
+        mock_erase.assert_not_called()
+
+# ------------------------------------------------- TESTS DE FINISH TURN ---------------------------------------------------------
 
 
 def test_finish_turn_with_zero_mov_cards():

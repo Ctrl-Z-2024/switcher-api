@@ -122,11 +122,17 @@ def assign_next_turn(game: Game):
     game.player_turn = (game.player_turn + 1) % game.player_amount
 
 
-def victory_conditions(game: Game) -> bool:
+def is_single_player_victory(game: Game) -> bool:
+    """ return true if there is only one player in the game """
     player_alone = game.status == GameStatus.in_game and game.player_amount == 1
 
     return player_alone
 
+def is_out_of_figure_cards_victory(game: Game) -> bool:
+    """ return true if the actual player is out of figure cards """
+    actual_player: Player = game.players[game.player_turn]
+
+    return len([cards for cards in actual_player.figure_cards]) == 0
 
 def end_game(game: Game, db: Session):
     game.status = GameStatus.finished
@@ -267,16 +273,15 @@ def calculate_partial_board(game: Game):
     return board_sch
 
 
-def verify_discard_blocked_card_condition(player: Player, figure_card: FigureCard):
+def verify_discard_blocked_card_condition(figure_card: FigureCard):
     """
     We verify that the blocked player does not have more than two cards in_hand
     """ 
-    cards_in_hand = [card for card in player.figure_cards if card.in_hand]
 
-    if figure_card.blocked and len(cards_in_hand) > 1:
+    if figure_card.blocked:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes descartar una carta bloqueada si tienes otras cartas en mano."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No puedes descartar una carta bloqueada."
         )
 
 def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
@@ -291,7 +296,8 @@ def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
     - True si la carta figura está en la mano del jugador, False de lo contrario.
     """
     for card in player.figure_cards:
-        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player:
+        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player and card.in_hand:
+            verify_discard_blocked_card_condition(card)
             return True
     return False
 

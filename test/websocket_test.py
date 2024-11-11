@@ -344,22 +344,29 @@ def test_victory_when_player_is_alone():
         assert response.status_code == 200
         assert response.json() == {
             "message": "Juan abandono la partida",
-            "game": {
-                "id": 1,
-                "name": "gametest",
-                "player_amount": 0,
-                "status": "finished",  # El estado debe ser 'finished' cuando alguien gana
-                "host_id": 2,
-                "forbidden_color": "none",
-                "player_turn": 1,
-                # Solo Pedro queda en el juego, y ha ganado
-                "players": [{"id": 2, "name": "Pedro", "movement_cards": [], "figure_cards": [], "blocked":False}],
-            }
+            'game': {
+                'host_id': 2,
+                'id': 1,
+                'name': 'gametest',
+                'player_amount': 0,
+                'player_turn': 1,
+                'players': [
+                    {
+                        'blocked': False,
+                        'figure_cards': [],
+                        'id': 2,
+                        'movement_cards': [],
+                        'name': 'Pedro',
+                    },
+                ],
+                'status': 'finished',
+                'forbidden_color': "none"
+            },
         }
 
         # Verificar que se haya llamado a la función broadcast_game_won
         mock_manager[mock_game.id].broadcast_game_won.assert_called_once_with(
-            mock_game, "Pedro")
+            mock_game, mock_list_players[1])
 
     # Restablecer dependencias sobrescritas
     app.dependency_overrides = {}

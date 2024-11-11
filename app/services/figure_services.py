@@ -7,6 +7,7 @@ from typing import List
 from app.schemas.board_schemas import BoardSchemaOut
 from app.services.game_services import calculate_partial_board
 from app.schemas.figure_schema import FigureInBoardSchema
+from app.db.enums import Colors
 import logging
 
 def is_figure_isolated(tiles:List[Coordinate], board:BoardSchemaOut) -> bool:
@@ -31,10 +32,12 @@ def is_figure_isolated(tiles:List[Coordinate], board:BoardSchemaOut) -> bool:
                 return False
     return True
 
-def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate) -> List[Coordinate]:
+def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate, f_color: Colors) -> List[Coordinate]:
     """Check if the path is valid. i.e if the tiles in that path share the same color"""
     current_tile = start
     actual_board = board.color_distribution
+    if actual_board[current_tile.x][current_tile.y] == f_color:
+        return []
     valid_path = []
     for mov in path:
         next_tile = None
@@ -62,7 +65,7 @@ def get_path_valid(path:List[Movement], board:BoardSchemaOut, start: Coordinate)
     return valid_path
 
 
-def get_figure_in_board(figure_type:tuple, board: BoardSchemaOut) -> List[FigureInBoardSchema]:
+def get_figure_in_board(figure_type:tuple, board: BoardSchemaOut, f_color: Colors) -> List[FigureInBoardSchema]:
     """
     Get all figures of a certain type in the board. If the list is empty, the figure is not in the board.
     """
@@ -71,7 +74,7 @@ def get_figure_in_board(figure_type:tuple, board: BoardSchemaOut) -> List[Figure
     for path in possible_paths:
         for x in range(6):
             for y in range(6):
-                valid_fig = get_path_valid(path, board, Coordinate(x=x, y=y))
+                valid_fig = get_path_valid(path=path, board=board, start=Coordinate(x=x, y=y), f_color=f_color)
                 if valid_fig and is_figure_isolated(valid_fig, board):
                     figures.append(FigureInBoardSchema(fig=figure_type, tiles=valid_fig))
     return figures
@@ -91,7 +94,7 @@ def get_all_figures_in_board(game: Game) -> List[FigureInBoardSchema]:
     #             figures.append(card.type_and_difficulty)
     
     for fig in FigTypeAndDifficulty:
-        fig_in_board = get_figure_in_board(figure_type=fig.value, board=board)
+        fig_in_board = get_figure_in_board(figure_type=fig.value, board=board, f_color=game.forbidden_color)
         if fig_in_board:
             all_figures.extend(fig_in_board)
 

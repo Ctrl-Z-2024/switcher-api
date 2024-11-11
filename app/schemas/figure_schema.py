@@ -2,6 +2,7 @@ from app.db.enums import FigTypeAndDifficulty
 from pydantic import BaseModel
 from app.schemas.movement_schema import Coordinate
 from typing import List
+from app.db.enums import Colors
 
 class FigureInBoardSchema(BaseModel):
     fig : FigTypeAndDifficulty
@@ -16,6 +17,6 @@ class FigureToDiscardSchema(BaseModel):
 
     figure_card: str
     associated_player: int
-
-    # tiles: List[Coordinate]
     figure_board: str
+    clicked_x : int
+    clicked_y : int

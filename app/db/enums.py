@@ -52,3 +52,4 @@ class Colors(Enum):
     blue = "blue"
     yellow = "yellow"
     green = "green"
+    none = "none"

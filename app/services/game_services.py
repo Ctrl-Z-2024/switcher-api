@@ -128,19 +128,22 @@ def is_single_player_victory(game: Game) -> bool:
 
     return player_alone
 
-def is_out_of_figure_cards_victory(game: Game) -> bool:
-    """ return true if the actual player is out of figure cards """
-    actual_player: Player = game.players[game.player_turn]
 
-    return len([cards for cards in actual_player.figure_cards]) == 0
+def is_out_of_figure_cards_victory(player: Player) -> bool:
+    """ return true if the actual player is out of figure cards """
+    return len(player.figure_cards) == 0
+
 
 def end_game(game: Game, db: Session):
     game.status = GameStatus.finished
     game.player_amount = 0
-    
+
     for player in game.players:
         player.game_id = None
+        player.blocked = False
         clear_all_cards(player, db)
+        
+    db.delete(game)
 
 
 def convert_board_to_schema(game: Game):
@@ -273,53 +276,74 @@ def calculate_partial_board(game: Game):
     return board_sch
 
 
-def verify_discard_blocked_card_condition(figure_card: FigureCard):
+def verify_discard_blocked_card_condition(player: Player, figure_card: FigureCard):
     """
     We verify that the blocked player does not have more than two cards in_hand
-    """ 
-
-    if figure_card.blocked:
+    """
+    if player.blocked and figure_card.blocked:
+        if len(player.figure_cards) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No puedes descartar una carta bloqueada."
+            )
+    elif not player.blocked and figure_card.blocked:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No puedes descartar una carta bloqueada."
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail="Caso borde que no deberia pasar nunca."
         )
 
-def has_figure_card(player, figure_card_schema: FigureCardSchema) -> bool:
+
+def has_figure_card(player: Player, figure_card_schema: FigureCardSchema) -> bool:
     """
     Verifica si el jugador tiene la carta de figura en mano comparando con el esquema dado.
-    
+
     Args:
     - player: El jugador que se está verificando.
     - figure_card_schema: El esquema de la carta de figura a comparar.
-    
+
     Returns:
     - True si la carta figura está en la mano del jugador, False de lo contrario.
     """
-    for card in player.figure_cards:
-        if card.type_and_difficulty == figure_card_schema.type and card.associated_player == figure_card_schema.associated_player and card.in_hand:
-            verify_discard_blocked_card_condition(card)
-            return True
-    return False
+    filtered_cards = [card for card in player.figure_cards if card.in_hand and card.type_and_difficulty ==
+                      figure_card_schema.type and card.associated_player == figure_card_schema.associated_player]
+
+    if not filtered_cards:
+        return False
+
+    if len(filtered_cards) > 1:
+        return True
+
+    for card in filtered_cards:
+        verify_discard_blocked_card_condition(player, card)
+
+    return True
 
 
-#Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
-#donde solo se hicieron unitest para esta funcion y no para el endpoint que la llama 
-#queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
+# Es posible que esta funcion no la saque de la base de datos, dejo constancia de un momento de demencia
+# donde solo se hicieron unitest para esta funcion y no para el endpoint que la llama
+# queda a futuro testear correctamente el endpoint, por cuestiones de tiempo y salud mental solo se hicieron test unitarios
 
-def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):    
-    figure_card = next((card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None)
+
+def erase_figure_card(player: Player, figure: FigureCardSchema, db: Session):
+    figure_card = next(
+        (
+            card for card in player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand and not card.blocked),
+        None
+    )
+
     if not figure_card:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Figure card not found in player's hand")
     player.figure_cards.remove(figure_card)
     db.delete(figure_card)
-    db.commit()
+
 
 def get_real_FigType(ugly: str) -> (FigTypeAndDifficulty | None):
     for fig in FigTypeAndDifficulty:
         if fig.value[0] == ugly:
             return fig
     return None
+
 
 def get_real_card(player: Player, figure_to_discard: FigureToDiscardSchema, db: Session, game: Game):
     real_type = get_real_FigType(figure_to_discard.figure_card)
@@ -336,18 +360,33 @@ def get_real_figure_in_board(figure_to_discard: FigureToDiscardSchema, game: Gam
 def serialize_board(board: BoardSchemaOut):
     return [[color.value for color in row] for row in board.color_distribution]
 
-def get_player_by_id (id : int, game: Game):
+
+def get_player_by_id(id: int, game: Game):
     for player in game.players:
         if player.id == id:
             return player
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail="El jugador no esta en la partida")
 
+
 def block_player(figure: FigureCardSchema, player: Player, db: Session):
     m_player = db.merge(player)
     m_player.blocked = True
-    figure_card = next((card for card in m_player.figure_cards if card.type_and_difficulty == figure.type and card.in_hand), None) #ojo aca
+    figure_card = next((card for card in m_player.figure_cards if card.type_and_difficulty ==
+                       figure.type and card.in_hand), None)  # ojo aca
     figure_card.blocked = True
+
+    db.commit()
+    db.refresh(m_player)
+
+
+def unlock_remaining_card(player: Player, db: Session):
+    m_player = db.merge(player)
+
+    if m_player.blocked:
+        figure_card = next(
+            (card for card in m_player.figure_cards if card.in_hand), None)  # ojo aca
+        figure_card.blocked = False
 
     db.commit()
     db.refresh(m_player)

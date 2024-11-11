@@ -329,7 +329,7 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
         movement.final_movement = True
 
     delete_movement_cards_not_in_hand(player_turn_obj, db)
-    
+
     # Registrar la carta figura en el descarte
     erase_figure_card(player=player_turn_obj, figure=figure_card, db=db)
 
@@ -352,19 +352,20 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
 
-    if is_out_of_figure_cards_victory(player_turn_obj):
-        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
-            game, player_turn_obj))
-
     # El color prohibido ha cambiado: reenviar todas las figuras formadas en el tablero.
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
-    
-    end_game(game, db)
-    
+
+    if is_out_of_figure_cards_victory(player_turn_obj):
+
+        asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
+            game, player_turn_obj))
+
+        end_game(game, db)
+
     db.commit()
-    db.refresh(player)
+    db.refresh(player_turn_obj)
 
     return {"message": "Carta figura descartada con exito"}
 

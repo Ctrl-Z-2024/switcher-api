@@ -353,7 +353,7 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
 
-    if is_out_of_figure_cards_victory(game):
+    if is_out_of_figure_cards_victory(player_turn_obj):
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
             game, player_turn_obj))
 

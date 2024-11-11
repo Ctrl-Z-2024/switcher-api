@@ -129,11 +129,9 @@ def is_single_player_victory(game: Game) -> bool:
     return player_alone
 
 
-def is_out_of_figure_cards_victory(game: Game) -> bool:
+def is_out_of_figure_cards_victory(player: Player) -> bool:
     """ return true if the actual player is out of figure cards """
-    actual_player: Player = game.players[game.player_turn]
-
-    return len([cards for cards in actual_player.figure_cards]) == 0
+    return len(player.figure_cards) == 0
 
 
 def end_game(game: Game, db: Session):

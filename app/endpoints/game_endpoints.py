@@ -101,6 +101,8 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
     remove_player_from_game(player, game, db)
 
     clear_all_cards(player, db)
+    
+    player.blocked = False
 
     db.commit()
     db.refresh(game)

@@ -105,7 +105,7 @@ async def quit_game(player: Player = Depends(auth_scheme), game: Game = Depends(
     db.commit()
     db.refresh(game)
     db.refresh(player)
-    
+
     asyncio.create_task(game_connection_managers[game.id].broadcast_disconnection(
         game=game, player_id=player.id, player_name=player.name))
 
@@ -151,7 +151,7 @@ async def start_game(game: Game = Depends(get_game), db: Session = Depends(get_d
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_board(game))
-    
+
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
@@ -171,7 +171,7 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder finalizarlo")
-    
+
     reassign_all_movement_cards(player_turn_obj, db)
 
     deal_movement_cards(player_turn_obj, db)
@@ -278,65 +278,74 @@ def get_games(
 
     return games
 
+
 @router.put("/{id_game}/figure/discard", summary="Discard a figure card")
-async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: Player = Depends (auth_scheme), db: Session = Depends (get_db), game: Game = Depends(get_game)):
+async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: Player = Depends(auth_scheme), db: Session = Depends(get_db), game: Game = Depends(get_game)):
 
     player_turn_obj: Player = game.players[game.player_turn]
     board = calculate_partial_board(game)
 
-    figure_card = get_real_card(player=player_turn_obj, figure_to_discard=figure_to_discard, db=db, game=game)
-    figure_in_board = get_real_figure_in_board(figure_to_discard=figure_to_discard, game=game)
+    figure_card = get_real_card(
+        player=player_turn_obj, figure_to_discard=figure_to_discard, db=db, game=game)
+    figure_in_board = get_real_figure_in_board(
+        figure_to_discard=figure_to_discard, game=game)
 
     figure_color = board.color_distribution[figure_to_discard.clicked_x][figure_to_discard.clicked_y]
 
-    #Verificar que la carta figura esta en la mano del jugador
-    
+    # Verificar que la carta figura esta en la mano del jugador
+
     if player.id != player_turn_obj.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Es necesario que sea tu turno para poder realizar un movimiento")
 
     if figure_color == game.forbidden_color:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="El color de la figura no puede ser el color prohibido")
 
     if not has_figure_card(figure_card_schema=figure_card, player=player_turn_obj):
-      raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta en la mano del jugador")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="La carta figura no esta en la mano del jugador")
 
     figure_type = figure_card.type.value
 
-    #Verificar que la carta figura esta formada en el tablero
-    
+    # Verificar que la carta figura esta formada en el tablero
+
     if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type, f_color=game.forbidden_color)]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La carta figura no esta formada en el tablero")
-    
-    #Actualizar el tablero en la bd
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="La carta figura no esta formada en el tablero")
+
+    # Actualizar el tablero en la bd
     game.board.color_distribution = serialize_board(board)
 
-    #Actualizar el color prohibido
+    # Actualizar el color prohibido
     game.forbidden_color = figure_color
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_board(game))
-    
-    #Setear movimientos como finales
+
+    # Setear movimientos como finales
     for movement in player_turn_obj.movements:
         movement.final_movement = True
-        
+
     delete_movement_cards_not_in_hand(player_turn_obj, db)
 
-    #Registrar la carta figura en el descarte
-    erase_figure_card(player=player_turn_obj,figure=figure_card, db=db)
+    # Registrar la carta figura en el descarte
+    erase_figure_card(player=player_turn_obj, figure=figure_card, db=db)
     asyncio.create_task(
-    game_connection_managers[game.id].broadcast_game(game))
+        game_connection_managers[game.id].broadcast_game(game))
 
     if is_out_of_figure_cards_victory(game):
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
             game, player_turn_obj))
-        
-    #El color prohibido ha cambiado: reenviar todas las figuras formadas en el tablero.
+
+    # El color prohibido ha cambiado: reenviar todas las figuras formadas en el tablero.
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
 
-    return {"message": "Figure card discarded successfully"}
+    # Should always set player.blocked to True
+    player_turn_obj.blocked = True
+    db.commit()
+    db.refresh(player_turn_obj)
 
+    return {"message": "Figure card discarded successfully"}

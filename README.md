@@ -62,3 +62,7 @@ Para ejecutar un test específico:
 ```bash
 (env) $ pytest <archivo>.py::<test-especifico>
 ```
+Para ejecutar con coverage:
+```bash
+(env) $ pytest --cov 
+```

@@ -993,6 +993,7 @@ def test_discard_figure_card():
         mock_erase.return_value = None
         mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game_won = AsyncMock(
             return_value=None)
         mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(
@@ -1063,6 +1064,8 @@ def test_discard_figure_card_victory():
         mock_erase.return_value = None
         mock_erase.side_effect = side_effect
         mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
+
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game_won = AsyncMock(
             return_value=None)
@@ -1184,6 +1187,7 @@ def test_unlock_and_discard_figure_card():
         mock_erase.return_value = None
         mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(
             return_value=None)
 
@@ -1248,6 +1252,7 @@ def test_discard_figure_card_when_other_equal_figure_is_in_hand():
         mock_erase.return_value = None
         mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(
             return_value=None)
 
@@ -1346,6 +1351,7 @@ def test_finish_turn_with_zero_mov_cards():
 
         mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(
             return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -1359,7 +1365,7 @@ def test_finish_turn_with_zero_mov_cards():
 
         with patch('random.choice', side_effect=mock_movement_choices):
             response = client.put("games/1/finish-turn")
-
+            
             # we expect it's Juan turn (index 0)
             # we expect Maria to have three movement cards
             expected_response = {
@@ -1443,6 +1449,8 @@ def test_finish_turn_with_two_mov_cards():
 
         mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(
             return_value=None)
+        
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -1450,6 +1458,7 @@ def test_finish_turn_with_two_mov_cards():
 
         with patch('random.choice', side_effect=mock_movement_choices):
             response = client.put("games/1/finish-turn")
+            mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
             # we expect it's Juan turn (index 0)
             # we expect Maria to have three movement cards
@@ -1533,6 +1542,7 @@ def test_finish_turn_with_one_fig_blocked():
 
         mock_manager[mock_game.id].broadcast_finish_turn = AsyncMock(
             return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         mock_movement_choices = [
             MovementType.MOV_01,
@@ -1758,6 +1768,7 @@ def test_block_figure_card():
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game_won = AsyncMock(
             return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(
             return_value=None)
 
@@ -1827,6 +1838,7 @@ def test_block_figure_card_already_blocked():
         # mock_erase.return_value = None
         mock_manager[mock_game].broadcast_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        
         mock_manager[mock_game].broadcast_game_won = AsyncMock(
             return_value=None)
         mock_manager[mock_game.id].broadcast_figures_in_board = AsyncMock(

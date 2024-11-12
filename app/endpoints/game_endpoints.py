@@ -198,6 +198,9 @@ async def finish_turn(player: Player = Depends(auth_scheme), game: Game = Depend
         game_connection_managers[game.id].broadcast_game(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_finish_turn(game, game.players[game.player_turn].name))
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_moves_in_board(game)
+    )
 
     return {"message": "Turno finalizado", "game": game_out}
 
@@ -221,6 +224,9 @@ async def undo_movement(player: Player = Depends(auth_scheme), game: Game = Depe
                 game_connection_managers[game.id].broadcast_figures_in_board(game))
             asyncio.create_task(
                 game_connection_managers[game.id].broadcast_game(game))
+            asyncio.create_task(
+                game_connection_managers[game.id].broadcast_partial_moves_in_board(game)
+                )
 
             return Response(status_code=status.HTTP_204_NO_CONTENT)
     else:
@@ -247,12 +253,18 @@ async def add_movement(movement: MovementSchema, player: Player = Depends(auth_s
 
     make_partial_move(movement=movement, player=player, db=db)
 
+    db.commit()
+    db.refresh(player_turn_obj)
+
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_partial_board(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game))
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_game(game))
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_moves_in_board(game)
+    )
 
     return {"message": f"Movimiento realizado por {player.name}"}
 
@@ -308,7 +320,6 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
                             detail="La carta figura no esta en la mano del jugador")
 
     figure_type = figure_card.type.value
-
     # Verificar que la carta figura esta formada en el tablero
 
     if figure_in_board.fig not in [x.fig for x in get_figure_in_board(board=board, figure_type=figure_type, f_color=game.forbidden_color)]:
@@ -357,6 +368,10 @@ async def discard_figure_card(figure_to_discard: FigureToDiscardSchema, player: 
         game_connection_managers[game.id].broadcast_figures_in_board(game)
     )
 
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_moves_in_board(game) #
+    )
+
     if is_out_of_figure_cards_victory(player_turn_obj):
 
         asyncio.create_task(game_connection_managers[game.id].broadcast_game_won(
@@ -392,7 +407,6 @@ async def block_figure_card(figure_to_block: FigureToDiscardSchema, player: Play
     if game.players[game.player_turn].id == player_to_block.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="No puedes bloquear tu propia carta")
-
     board = calculate_partial_board(game)
 
     figure_card = get_real_card(
@@ -440,6 +454,9 @@ async def block_figure_card(figure_to_block: FigureToDiscardSchema, player: Play
 
     asyncio.create_task(
         game_connection_managers[game.id].broadcast_figures_in_board(game)
+    )
+    asyncio.create_task(
+        game_connection_managers[game.id].broadcast_partial_moves_in_board(game) #
     )
 
     return {"message": f"Bloqueaste a {player_to_block.name}!"}

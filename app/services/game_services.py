@@ -7,11 +7,12 @@ from app.schemas.player_schemas import PlayerGameSchemaOut
 from app.db.enums import GameStatus
 from app.schemas.movement_cards_schema import MovementCardSchema
 from app.schemas.player_schemas import PlayerGameSchemaOut
-from app.schemas.movement_schema import MovementSchema
+from app.schemas.movement_schema import MovementSchema, Coordinate
 from app.db.enums import GameStatus, FigTypeAndDifficulty
 from app.services.movement_services import reassign_movement_card
 from app.db.constants import AMOUNT_OF_FIGURES_DIFFICULT, AMOUNT_OF_FIGURES_EASY
 import random
+from typing import List
 from app.schemas.board_schemas import BoardSchemaOut
 from app.models.figure_card_model import FigureCard
 from app.schemas.figure_schema import FigTypeAndDifficulty, FigureInBoardSchema, FigureToDiscardSchema
@@ -390,3 +391,24 @@ def unlock_remaining_card(player: Player, db: Session):
 
     db.commit()
     db.refresh(m_player)
+
+def get_move_tiles(game:Game) -> List[Coordinate]:
+    player_in_turn_obj : Player = game.players[game.player_turn]
+    player_partial_movs = [
+        mov for mov in player_in_turn_obj.movements if not mov.final_movement]
+    
+    player_partial_movs = sorted(player_partial_movs, key=lambda mov: mov.id)
+
+    partial_mov_tiles = []
+
+    for mov in player_partial_movs:
+        cord_1 = Coordinate(x=mov.x1, y=mov.y1)
+        cord_2 = Coordinate(x=mov.x2, y=mov.y2)
+        if cord_1 not in partial_mov_tiles:
+            partial_mov_tiles.append(cord_1)
+
+        if cord_2 not in partial_mov_tiles:
+            partial_mov_tiles.append(cord_2)
+        
+    return partial_mov_tiles
+

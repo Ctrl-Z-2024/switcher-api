@@ -66,6 +66,7 @@ def test_add_partial_move():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         client.put("/games/1/movement/add", json=movement_data)
 
@@ -108,6 +109,8 @@ def test_undo_movement_success():
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_player_turn
+
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         # Llamada al cliente para deshacer el movimiento
         response = client.put("/games/1/movement/back")
@@ -210,7 +213,7 @@ def test_undo_movement_multiple_partial_movements():
         mock_game = Game(id=1, players=mock_list_players, player_amount=3, name="Game 1", status=GameStatus.in_game, host_id=1, player_turn=2)
 
         mock_db.merge.return_value = mock_player_turn
-
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         # Configuración de dependencias
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -258,6 +261,7 @@ def test_add_movement_mov01_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -313,6 +317,7 @@ def test_add_movement_mov01_fail():
         mock_db.merge.return_value = mock_list_players[2]
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -369,6 +374,7 @@ def test_add_movement_mov02_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -422,6 +428,7 @@ def test_add_movement_mov02_fail():
         
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -477,6 +484,7 @@ def test_add_movement_mov03_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -584,6 +592,7 @@ def test_add_movement_mov04_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -690,6 +699,7 @@ def test_add_movement_mov05_succesfull():
         mock_manager[mock_game.id].broadcast_movement = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
@@ -798,6 +808,7 @@ def test_add_movement_mov06_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -905,6 +916,7 @@ def test_add_movement_mov07_succesfull():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
@@ -1105,10 +1117,12 @@ def test_add_movement_calls_validate_and_discard():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
         
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game
         app.dependency_overrides[auth_scheme] = lambda: mock_list_players[2]
+
         
         movement_data = {
             "movement_card": {
@@ -1173,6 +1187,7 @@ def test_add_movement_card_discarded():
         mock_manager[mock_game].broadcast_partial_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_figures_in_board = AsyncMock(return_value=None)
         mock_manager[mock_game].broadcast_game = AsyncMock(return_value=None)
+        mock_manager[mock_game].broadcast_partial_moves_in_board = AsyncMock(return_value=None)
 
         app.dependency_overrides[get_db] = lambda: mock_db
         app.dependency_overrides[get_game] = lambda: mock_game

@@ -4,7 +4,7 @@ from app.services.figure_services import get_all_figures_in_board
 from app.services.game_services import convert_game_to_schema
 from app.models.game_models import Game
 from app.dependencies.dependencies import get_game_list
-from app.services.game_services import convert_board_to_schema, calculate_partial_board
+from app.services.game_services import convert_board_to_schema, calculate_partial_board, get_move_tiles
 from app.models.board_models import Board
 import logging
 from app.models.player_models import Player
@@ -165,4 +165,13 @@ class GameManager:
             "message": "",
             "payload": figures
         }
-        await self.connection_manager.broadcast(event_message)       
+        await self.connection_manager.broadcast(event_message)     
+
+    async def  broadcast_partial_moves_in_board(self, game:Game):
+        tiles_coord = get_move_tiles(game)
+        event_message = {
+            "type": "partial_moves",
+            "message": "",
+            "payload": tiles_coord
+        }
+        await self.connection_manager.broadcast(event_message)   
